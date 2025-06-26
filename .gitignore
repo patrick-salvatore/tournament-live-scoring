@@ -1,0 +1,6 @@
+*.crt
+tmp
+.env
+bin
+.postgres
+ui/build/*
