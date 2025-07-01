@@ -21,9 +21,7 @@ COPY . .
 
 COPY --from=ui-builder ./ui/build/client ./ui/build/client
 
-# RUN mkdir -p ./tmp
-
-RUN go build -o ./tmp/main .
+RUN go build -o ./main .
 
 # --- Stage 3: Run ---
 FROM alpine:latest
@@ -38,10 +36,10 @@ RUN apk add --no-cache \
     ca-certificates
 
 # download and unzip PocketBase
-ADD https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pb.zip
-RUN unzip /tmp/pb.zip -d /pb/
+# ADD https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pb.zip
+# RUN unzip /tmp/pb.zip -d /pb/
 
 EXPOSE 8080
 
 # start PocketBase
-CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8080"]
+CMD ["./main", "serve", "--http=0.0.0.0:8080"]
