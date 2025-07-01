@@ -1,8 +1,8 @@
 run: build
-	@./tmp/main serve
+	@./main serve
 
 build: 
-	@go build -o ./tmp/main .
+	@go build -o ./main .
 
 image: 
 	docker build -t tournament-live-scoring .

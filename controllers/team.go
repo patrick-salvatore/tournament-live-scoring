@@ -68,9 +68,5 @@ func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 		return e.InternalServerError("Failed to create session JWT", err)
 	}
 
-	if err != nil {
-		return e.InternalServerError("Failed to create session JWT", err)
-	}
-
 	return e.JSON(http.StatusOK, map[string]string{"token": jwt})
 }
