@@ -1,46 +1,98 @@
 import { createForm, useField, Form as _Form } from "@gapu/formix";
+import { useNavigate } from "@solidjs/router";
+import { useMutation } from "@tanstack/solid-query";
+import { ErrorBoundary } from "solid-js";
 import { z } from "zod";
-import { createSignal } from "solid-js";
 
-const UuidField = () => {
-  const field = useField<string>("uuid");
+import { assignTeam } from "~/api/teams";
+
+import { LoadingButton } from "~/components/loading_button";
+import { Card, CardContent, CardFooter } from "~/components/ui/card";
+import { FieldError, FormError } from "~/components/ui/form";
+import { TextField, TextFieldRoot } from "~/components/ui/textfield";
+import authStore from "~/lib/auth";
+
+const TeamUuidField = () => {
+  const field = useField<string>("teamId");
 
   return (
-    <input
-      value={field.value() || ""}
-      placeholder="uuid"
-      onInput={(e) => field.setValue(e.currentTarget.value)}
-      onFocus={() => field.setMeta((prev: any) => ({ ...prev, touched: true }))}
-      disabled={field.meta().disabled}
-    />
+    <TextFieldRoot class="space-y-1">
+      <TextField
+        value={field.value() as string}
+        placeholder="Team Code"
+        onInput={(e) => field.setValue(e.currentTarget.value)}
+        onFocus={() => {
+          field.setMeta((prev) => ({ ...prev, touched: true }));
+        }}
+        disabled={field.meta().disabled}
+        required
+      />
+      <FieldError name={"teamId"} />
+    </TextFieldRoot>
   );
 };
 
-const Form = () => {
-  const formContext = createForm({
+const TeamForm = () => {
+  const navigate = useNavigate();
+
+  const form = createForm({
     schema: z.object({
-      uuid: z.string(),
+      teamId: z.string(),
     }),
-    initialState: {},
-    onSubmit: async (state: any) => {
-      console.log("Form submitted:", state);
+    initialState: {
+      teamId: "",
+      error: null,
+    },
+    onSubmit: async (state) => {
+      mutation.mutate({ teamId: state.teamId });
+      Object.keys(state).forEach((key) => {
+        form.setFieldMeta(key, (prev) => ({
+          ...prev,
+          error: null,
+        }));
+      });
     },
   });
 
+  const mutation = useMutation<string, any, { teamId: string }>(() => ({
+    mutationFn: ({ teamId }) => assignTeam(teamId),
+    onError: (error: any) => {
+      console.log(error);
+      form.setState("error", () => error.response.data.message);
+    },
+    onSuccess: (data) => {
+      authStore.save(data);
+    },
+  }));
+
   return (
-    <_Form context={formContext}>
-      <UuidField />
-      <button type="submit">Submit</button>
-    </_Form>
+    <Card class="pt-4">
+      <_Form context={form}>
+        <CardContent class="p-4 space-y-2">
+          <TeamUuidField />
+        </CardContent>
+        <CardFooter>
+          <LoadingButton isLoading={() => mutation.isPending} type="submit">
+            Submit
+          </LoadingButton>
+        </CardFooter>
+        <FormError />
+      </_Form>
+    </Card>
   );
 };
 
 export default function Home() {
-  const [count, setCount] = createSignal(0);
-  // const query = useQuery(() => ({
-  //   queryKey: ["tournaments"],
-  //   queryFn: getTournaments,
-  // }));
-
-  return <Form />;
+  return (
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <div>
+          <p>Something went wrong: {error.message}</p>
+          <button onClick={reset}>Try Again</button>
+        </div>
+      )}
+    >
+      <TeamForm />
+    </ErrorBoundary>
+  );
 }

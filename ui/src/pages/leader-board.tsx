@@ -1,0 +1,87 @@
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import { For } from "solid-js";
+
+type Team = {
+  name: string;
+  grossScores: number[];
+  netScores?: number[];
+};
+
+const teams: Team[] = [
+  {
+    name: "Birdie Boys",
+    grossScores: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5, 4, 4, 5, 3, 4, 5, 4, 4],
+    netScores: [3, 4, 2, 3, 4, 3, 2, 4, 3, 4, 3, 3, 4, 2, 3, 4, 3, 3],
+  },
+  {
+    name: "The Fore Players",
+    grossScores: [4, 4, 4, 4, 4, 4, 4, 4, 4],
+    netScores: [3, 3, 3, 3, 3, 3, 3, 3, 3],
+  },
+  {
+    name: "Mulligan Masters",
+    grossScores: [5, 6, 4, 6, 5, 5, 6],
+  },
+  {
+    name: "Shankopotamus",
+    grossScores: Array(18).fill(4),
+    netScores: Array(18).fill(3),
+  },
+  {
+    name: "Slice and Dice",
+    grossScores: [5, 5, 5, 5, 5, 5, 5, 5],
+    netScores: [4, 4, 4, 4, 4, 4, 4, 4],
+  },
+];
+
+const Leaderboard = () => {
+  const total = (scores: number[] = []) =>
+    scores.reduce((sum, s) => sum + (isNaN(s) ? 0 : s), 0);
+
+  const holesThru = (scores: number[]) => {
+    const played = scores.filter((s) => !isNaN(s));
+    return played.length === 18 ? "F" : played.length.toString();
+  };
+
+  return (
+    <Table>
+      <TableCaption>Live team leaderboard for the tournament.</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Team</TableHead>
+          <TableHead class="text-right">Gross</TableHead>
+          <TableHead class="text-right">Net</TableHead>
+          <TableHead class="text-center">Thru</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <For each={teams}>
+          {(team) => (
+            <TableRow>
+              <TableCell class="font-medium">{team.name}</TableCell>
+              <TableCell class="text-right">
+                {total(team.grossScores)}
+              </TableCell>
+              <TableCell class="text-right">
+                {team.netScores ? total(team.netScores) : "—"}
+              </TableCell>
+              <TableCell class="text-center">
+                {holesThru(team.grossScores)}
+              </TableCell>
+            </TableRow>
+          )}
+        </For>
+      </TableBody>
+    </Table>
+  );
+};
+
+export default Leaderboard;

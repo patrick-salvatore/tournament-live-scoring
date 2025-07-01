@@ -1,5 +1,5 @@
 run: build
-	@./bin/app serve
+	@./tmp/main serve
 
 build: 
-	@go build -o bin/app .
+	@go build -o ./tmp/main .

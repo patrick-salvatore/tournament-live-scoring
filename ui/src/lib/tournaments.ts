@@ -1,4 +1,6 @@
-import { getPocketBase } from "./pocketbase";
-
-export const getTournaments = () =>
-  getPocketBase().collection("tournaments").getFullList({});
+export type Tournament = {
+  id: string;
+  name: string;
+  uuid: string;
+  awardedHandicap: number;
+};

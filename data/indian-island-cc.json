@@ -1,48 +1,41 @@
 {
-  "0": { "par": "Par 4", "yardage": "428 yds", "handicap": "Hcp 1" },
-  "1": { "par": "Par 5", "yardage": "466 yds", "handicap": "Hcp 9" },
-  "2": { "par": "Par 4", "yardage": "333 yds", "handicap": "Hcp 13" },
-  "3": { "par": "Par 4", "yardage": "347 yds", "handicap": "Hcp 11" },
-  "4": { "par": "Par 3", "yardage": "112 yds", "handicap": "Hcp 17" },
-  "5": { "par": "Par 5", "yardage": "442 yds", "handicap": "Hcp 5" },
-  "6": { "par": "Par 4", "yardage": "375 yds", "handicap": "Hcp 3" },
-  "7": { "par": "Par 3", "yardage": "138 yds", "handicap": "Hcp 15" },
-  "8": { "par": "Par 4", "yardage": "365 yds", "handicap": "Hcp 7" },
-  "9": { "par": "Par 5", "yardage": "425 yds", "handicap": "Hcp 4" },
+  "0": { "par": 4, "handicap": 1 },
+  "1": { "par": 5, "handicap": 9 },
+  "2": { "par": 4, "handicap": 13 },
+  "3": { "par": 4, "handicap": 11 },
+  "4": { "par": 3, "handicap": 17 },
+  "5": { "par": 5, "handicap": 5 },
+  "6": { "par": 4, "handicap": 3 },
+  "7": { "par": 3, "handicap": 15 },
+  "8": { "par": 4, "handicap": 7 },
+  "9": { "par": 5, "handicap": 4 },
   "10": {
-    "par": "Par 3",
-    "yardage": "169 yds",
-    "handicap": "Hcp 6"
+    "par": 3,
+    "handicap": 6
   },
   "11": {
-    "par": "Par 4",
-    "yardage": "307 yds",
-    "handicap": "Hcp 12"
+    "par": 4,
+    "handicap": 12
   },
   "12": {
-    "par": "Par 4",
-    "yardage": "316 yds",
-    "handicap": "Hcp 14"
+    "par": 4,
+    "handicap": 14
   },
   "13": {
-    "par": "Par 4",
-    "yardage": "300 yds",
-    "handicap": "Hcp 18"
+    "par": 4,
+    "handicap": 18
   },
   "14": {
-    "par": "Par 5",
-    "yardage": "431 yds",
-    "handicap": "Hcp 2"
+    "par": 5,
+    "handicap": 2
   },
   "15": {
-    "par": "Par 4",
-    "yardage": "296 yds",
-    "handicap": "Hcp 16"
+    "par": 4,
+    "handicap": 16
   },
   "16": {
-    "par": "Par 3",
-    "yardage": "164 yds",
-    "handicap": "Hcp 10"
+    "par": 3,
+    "handicap": 10
   },
-  "17": { "par": "Par 4", "yardage": "350 yds", "handicap": "Hcp 8" }
+  "17": { "par": 4, "handicap": 8 }
 }
