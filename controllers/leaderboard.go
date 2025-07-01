@@ -69,14 +69,14 @@ func (lc *LeaderboardController) HandleGetLeaderboard(e *core.RequestEvent) erro
 
 		leaderboardRow.TeamId = teamId
 
-		holeNumber := 1
-		for holeNumber <= 18 {
-			teamHoles := teamHolesMap[holeNumber]
+		holeNumber := 0
+		for holeNumber <= 17 {
+			teamHoles := teamHolesMap[holeNumber+1]
 			if len(teamHoles) == 0 {
 				break
 			}
 
-			leaderboardRow.Thru = holeNumber
+			leaderboardRow.Thru = holeNumber + 1
 
 			var holePar int
 			var netScore int
@@ -115,6 +115,9 @@ func (lc *LeaderboardController) HandleGetLeaderboard(e *core.RequestEvent) erro
 		leaderboardRows = append(leaderboardRows, leaderboardRow)
 	}
 
+	sort.Slice(leaderboardRows, func(i, j int) bool {
+		return leaderboardRows[i].Net < leaderboardRows[j].Net
+	})
 	return e.JSON(http.StatusOK, leaderboardRows)
 }
 
