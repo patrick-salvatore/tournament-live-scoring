@@ -69,3 +69,20 @@ export function calculateHandicapStrokesDetailed(
     strokesReceived,
   };
 }
+
+export const getStrokeHole = ({
+  playerHandicap,
+  slope,
+  awardedHandicap,
+  holeHandicap,
+}: {
+  playerHandicap: number;
+  slope: number;
+  awardedHandicap: number;
+  holeHandicap: number;
+}) => {
+  const courseHandicap = Math.round(
+    ((Math.round(playerHandicap) * slope!) / 113) * awardedHandicap!
+  );
+  return courseHandicap >= holeHandicap;
+};

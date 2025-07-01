@@ -4,3 +4,4 @@ export type Team = {
   displayName: string;
   tournamentId: string;
 };
+export type Teams = Team[];

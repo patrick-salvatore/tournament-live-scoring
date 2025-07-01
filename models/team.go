@@ -10,6 +10,23 @@ type Team struct {
 	TournamentId string `db:"tournament_id" json:"tournamentId"`
 }
 
+func GetTeamsByTournamentId(db dbx.Builder, tournamentId string) (*[]Team, error) {
+	teams := []Team{}
+
+	err := db.
+		NewQuery("SELECT * FROM teams WHERE teams.tournament_id = {:tournament_id}").
+		Bind(dbx.Params{
+			"tournament_id": tournamentId,
+		}).
+		All(&teams)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &teams, nil
+}
+
 func GetTeamById(db dbx.Builder, id string) (*Team, error) {
 	team := Team{}
 

@@ -34,13 +34,65 @@ func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
 	return &hole, nil
 }
 
-func GetPlayerHoles(db dbx.Builder, playerId string, tournamentId string) (*[]Hole, error) {
+func GetPlayerHoles(db dbx.Builder, playerId string) (*[]Hole, error) {
 	var holes []Hole
 
 	err := db.
-		NewQuery("SELECT * FROM holes WHERE player_id = {:player_id} AND tournament_id = {:tournament_id} ORDER BY number").
+		NewQuery("SELECT * FROM holes WHERE player_id = {:player_id} ORDER BY number").
 		Bind(dbx.Params{
-			"player_id":     playerId,
+			"player_id": playerId,
+		}).
+		All(&holes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &holes, nil
+}
+
+func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hole, error) {
+	var holes []Hole
+
+	err := db.
+		NewQuery(`
+			SELECT 
+				holes.*,
+				teams.id AS team_id
+			FROM holes
+			JOIN players ON holes.player_id = players.id
+			JOIN teams ON players.team_id = teams.id
+			WHERE holes.tournament_id = {:tournament_id} AND teams.id = {:team_id}
+			ORDER BY holes.player_id, holes.number
+		`).
+		Bind(dbx.Params{
+			"tournament_id": tournamentId,
+			"team_id":       teamId,
+		}).
+		All(&holes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &holes, nil
+}
+
+func GetHolesForTournamentId(db dbx.Builder, tournamentId string) (*[]Hole, error) {
+	var holes []Hole
+
+	err := db.
+		NewQuery(`
+			SELECT 
+				holes.*,
+				teams.id AS team_id
+			FROM holes
+			JOIN players ON holes.player_id = players.id
+			JOIN teams ON players.team_id = teams.id
+			WHERE holes.tournament_id = {:tournament_id}
+			ORDER BY holes.player_id, holes.number
+		`).
+		Bind(dbx.Params{
 			"tournament_id": tournamentId,
 		}).
 		All(&holes)
@@ -52,13 +104,35 @@ func GetPlayerHoles(db dbx.Builder, playerId string, tournamentId string) (*[]Ho
 	return &holes, nil
 }
 
-func GetHolesForTournament(db dbx.Builder, tournamentId string) (*[]Hole, error) {
-	var holes []Hole
+type HoleWithMetadata struct {
+	Id                        string  `db:"id" json:"id"`
+	Score                     string  `db:"score" json:"score"`
+	Par                       int     `db:"par" json:"par"`
+	Handicap                  int     `db:"handicap" json:"handicap"`
+	Number                    int     `db:"number" json:"number"`
+	PlayerId                  string  `db:"player_name" json:"playerId"`
+	PlayerName                string  `db:"player_name" json:"playerName"`
+	TeamId                    string  `db:"team_id" json:"teamId"`
+	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedHandicap"`
+	StrokeHole                bool    `json:"strokeHole"`
+}
+
+func GetHolesWithAScoreForTournamentId(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
+	var holes []HoleWithMetadata
 
 	err := db.
 		NewQuery(`
-			SELECT holes.*
+			SELECT 
+				holes.*,
+				teams.id AS team_id,
+				players.handicap AS player_handicap,
+				players.name AS player_name,
+				tournaments.awarded_handicap as awarded_handicap 
 			FROM holes
+			JOIN players ON holes.player_id = players.id
+			JOIN teams ON players.team_id = teams.id
+			JOIN tournaments ON holes.tournament_id = {:tournament_id}
 			WHERE holes.tournament_id = {:tournament_id}
 			ORDER BY holes.player_id, holes.number
 		`).

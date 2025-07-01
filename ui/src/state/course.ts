@@ -25,5 +25,5 @@ export function useCourseStore<T>(selector?: (s: State) => T) {
 }
 
 export const selectCourseHoles = (s: State) => {
-  return reduceToByIdMap(s.holeLayout || [], "number");
+  return reduceToByIdMap(s.holes || [], "number");
 };

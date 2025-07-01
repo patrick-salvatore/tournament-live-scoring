@@ -1,43 +1,51 @@
 import { useLocation, useNavigate } from "@solidjs/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { createMemo, Suspense, type ParentComponent } from "solid-js";
-import { useTeamStore } from "~/state/team";
+import { createMemo, Show, Suspense, type ParentComponent } from "solid-js";
+import { selectTeamById, useTeamStore } from "~/state/team";
 import { identity } from "~/state/helpers";
+import { useSessionStore } from "~/state/session";
 
 const TournamentView: ParentComponent = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const teamId = useTeamStore(identity);
+  const session = useSessionStore(identity);
+  const teamStore = useTeamStore();
+
+  const team = createMemo(() => {
+    return selectTeamById(session()?.teamId)(teamStore.store);
+  });
 
   const currentTab = createMemo(() => {
-    if (location.pathname.endsWith("scoreCard")) return "scoreCard";
-    if (location.pathname.endsWith("leaderBoard")) return "leaderBoard";
+    if (location.pathname.endsWith("scorecard")) return "scorecard";
+    if (location.pathname.endsWith("leaderboard")) return "leaderboard";
   });
 
   const handleTabChange = (value: string) => {
-    if (value === "scoreCard") {
-      navigate(`/tournament/${teamId.id}/scoreCard`);
+    if (value === "scorecard") {
+      navigate(`/tournament/${team()?.id}/scorecard`);
     } else {
-      navigate(`/tournament/leaderBoard`);
+      navigate(`/tournament/leaderboard`);
     }
   };
 
   return (
-    <Tabs value={currentTab()} onChange={handleTabChange}>
-      <TabsList>
-        <TabsTrigger class="z-5" value="scoreCard">
-          Score Card
-        </TabsTrigger>
-        <TabsTrigger class="z-5" value="leaderBoard">
-          Leaderboard
-        </TabsTrigger>
-      </TabsList>
+    <Show when={session()}>
+      <Tabs value={currentTab()} onChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger class="z-5" value="scorecard">
+            Score Card
+          </TabsTrigger>
+          <TabsTrigger class="z-5" value="leaderboard">
+            Leaderboard
+          </TabsTrigger>
+        </TabsList>
 
-      <Suspense>
-        <TabsContent value="leaderBoard">{props.children}</TabsContent>
-      </Suspense>
-      <TabsContent value="scoreCard">{props.children}</TabsContent>
-    </Tabs>
+        <Suspense>
+          <TabsContent value="leaderboard">{props.children}</TabsContent>
+          <TabsContent value="scorecard">{props.children}</TabsContent>
+        </Suspense>
+      </Tabs>
+    </Show>
   );
 };
 

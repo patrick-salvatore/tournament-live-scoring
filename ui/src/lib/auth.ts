@@ -21,14 +21,12 @@ export const authCheck = query(async () => {
 
     const { set: setSessionStore } = useSessionStore();
 
-    console.log(session)
     if (!session.tourneyId || !session.teamId) {
       throw redirect("/tournament");
     }
-    
+
     setSessionStore({ tourneyId: session.tourneyId, teamId: session.teamId });
   } catch {
-
     throw redirect("/tournament");
   }
 }, "auth_check");
@@ -76,12 +74,8 @@ export class AuthStore {
     this.triggerChange();
   }
 
-  onChange(callback: OnStoreChangeFunc, fireImmediately = false): () => void {
+  onChange(callback: OnStoreChangeFunc): () => void {
     this._onChangeCallbacks.push(callback);
-
-    if (fireImmediately) {
-      callback(this.token);
-    }
 
     return () => {
       for (let i = this._onChangeCallbacks.length - 1; i >= 0; i--) {

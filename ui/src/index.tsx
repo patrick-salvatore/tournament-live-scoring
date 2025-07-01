@@ -17,8 +17,9 @@ import { Toaster, TOAST_POSITION } from "~/components/toast";
 
 import Home from "./pages/home";
 import Tournament from "./pages/tournament";
-import ScoreCard from "./pages/score-card";
 import LeaderBoard from "./pages/leader-board";
+import SessionRedirectGuard from "./components/session-redirect-guard";
+import ScoreCardRoute from "./pages/score-card";
 
 const root = document.getElementById("root");
 
@@ -41,12 +42,19 @@ render(
             preload={() => createAsync(async () => authCheck())}
             component={AppStoreSetter}
           >
-            <Route path="/:uuid" component={Tournament} />
+            <Route path=":uuid" component={Tournament} />
             <Route component={TournamentView}>
-              <Route path="/:teamId/scoreCard" component={ScoreCard} />
-              <Route path="/:leaderBoard" component={LeaderBoard} />
+              <ScoreCardRoute />
+              <Route path="leaderboard" component={LeaderBoard} />
             </Route>
-            <Route path="/" component={Home} />
+            <Route
+              path="*"
+              component={() => (
+                <SessionRedirectGuard>
+                  <Home />
+                </SessionRedirectGuard>
+              )}
+            />
           </Route>
           <Route
             path="*"

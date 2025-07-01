@@ -3,7 +3,7 @@ import { createForm, Form as _Form } from "@gapu/formix";
 import { createEffect, For } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { createScoreCardsForTeam } from "~/api/score-cards";
+import { createScoreCardsForTeam } from "~/api/scorecards";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { identity } from "~/state/helpers";
 export default function Tournament() {
   const navigate = useNavigate();
   const players = usePlayerStore(identity);
-  const sessionStore = useSessionStore();
+  const session = useSessionStore(identity);
   const scoreCards = () => useScoreCardStore(identity);
   const { init } = useScoreCardStore();
 
@@ -37,13 +37,13 @@ export default function Tournament() {
   const startTournament = async () => {
     form.setState("error", () => null);
     try {
-      if (sessionStore.session().teamId && sessionStore.session().tourneyId) {
+      if (session()?.teamId && session()?.tourneyId) {
         const scoreCards = await createScoreCardsForTeam({
-          teamId: sessionStore.session().teamId!,
-          tournamentId: sessionStore.session().tourneyId!,
+          teamId: session()?.teamId!,
+          tournamentId: session()?.tourneyId!,
         });
         init(scoreCards);
-        navigate(`/tournament/${sessionStore.session().teamId}/scoreCard`, {
+        navigate(`/tournament/${session()?.teamId}/scoreCard`, {
           replace: true,
         });
       }
@@ -54,7 +54,7 @@ export default function Tournament() {
 
   createEffect(() => {
     if (scoreCards().length) {
-      navigate(`/tournament/${sessionStore.session().teamId}/scoreCard`, {
+      navigate(`/tournament/${session()?.teamId}/scoreCard`, {
         replace: true,
       });
     }

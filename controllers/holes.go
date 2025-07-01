@@ -19,10 +19,23 @@ func NewHolesController(app core.App) *HolesController {
 	return &HolesController{db: app.DB(), app: app}
 }
 
-func (hc *HolesController) HandleGetAllTournamentHolesForTeam(e *core.RequestEvent) error {
+func (hc *HolesController) HandleGetAllTournamentHoles(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
 
-	holes, err := models.GetHolesForTournament(hc.db, tournamentId)
+	holes, err := models.GetHolesForTournamentId(hc.db, tournamentId)
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, holes)
+}
+
+func (hc *HolesController) HandleGetAllTournamentHolesForTeam(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("teamId")
+	tournamentId := e.Request.PathValue("tournamentId")
+
+	holes, err := models.GetHolesForTeam(hc.db, teamId, tournamentId)
 
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
@@ -44,7 +57,7 @@ func (hc *HolesController) HandleGetPlayersFromTeamId(e *core.RequestEvent) erro
 
 type UpdateHoleData struct {
 	HoleId string `json:"holeId"`
-	Score  string `json:"score"`
+	Score  int    `json:"score"`
 }
 
 func (hc *HolesController) HandleUpdateTeamHoleScores(e *core.RequestEvent) error {

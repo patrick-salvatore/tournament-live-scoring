@@ -8,6 +8,20 @@ export type Hole = {
   handicap: number;
   number: number;
   score: string;
+  teamId?: string;
+};
+
+export type HoleWithMetadata = {
+  id: string;
+  score: string;
+  par: number;
+  handicap: number;
+  number: number;
+  playerId: string;
+  teamId: string;
+  playerHandicap: number;
+  awardedTournamentHandicap: number;
+  strokeHole: boolean;
 };
 
 export type UpdateHolePayload = Partial<Hole>;

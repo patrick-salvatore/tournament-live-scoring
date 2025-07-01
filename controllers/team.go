@@ -17,6 +17,17 @@ func NewTeamsController(app core.App) *TeamsController {
 	return &TeamsController{app: app, db: app.DB()}
 }
 
+func (tc *TeamsController) HandleGetTeamsByTournamentId(e *core.RequestEvent) error {
+	tournamentId := e.Request.PathValue("tournamentId")
+	teams, err := models.GetTeamsByTournamentId(tc.db, tournamentId)
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, teams)
+}
+
 func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
 	id := e.Request.PathValue("id")
 	players, err := models.GetTeamById(tc.db, id)
@@ -56,31 +67,6 @@ func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("Failed to create session JWT", err)
 	}
-
-	// err = tc.app.RunInTransaction(func(txApp core.App) error {
-	// 	players, err := models.GetPlayersFromTeamId(tc.db, teamId)
-
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	for _, player := range *players {
-	// 		_, err := txApp.DB().Insert(
-	// 			"score_cards",
-	// 			dbx.Params{
-	// 				"tournament_id": team.TournamentId,
-	// 				"player_id":     player.Id,
-	// 				"course_id":     team.TournamentComplete,
-	// 			}).
-	// 			Execute()
-
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-
-	// 	return nil
-	// })
 
 	if err != nil {
 		return e.InternalServerError("Failed to create session JWT", err)

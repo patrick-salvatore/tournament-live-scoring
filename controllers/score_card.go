@@ -62,7 +62,7 @@ func (sc *ScoreCardController) HandleCreateScoreCardsForTeam(e *core.RequestEven
 	scoreCards := []*models.ScoreCardWithHoles{}
 	err = sc.app.RunInTransaction(func(txApp core.App) error {
 		for _, player := range *players {
-			courseData, err := models.GetCourseDataFromTournament(txApp.DB(), tournamentId)
+			courseData, err := models.GetCourseByTournamentId(txApp.DB(), tournamentId)
 			if err != nil {
 				return err
 			}
@@ -72,7 +72,7 @@ func (sc *ScoreCardController) HandleCreateScoreCardsForTeam(e *core.RequestEven
 				return err
 			}
 
-			holes, err := models.CreateAllHolesForPlayer(txApp.DB(), player.Id, tournamentId, courseData)
+			holes, err := models.CreateAllHolesForPlayer(txApp.DB(), player.Id, tournamentId, courseData.Holes)
 			if err != nil {
 				return err
 			}

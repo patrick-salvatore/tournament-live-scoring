@@ -18,10 +18,10 @@ export function useTournamentStore(): {
   set: SetStoreFunction<State>;
   init: (state: State) => void;
 };
-export function useTournamentStore<T>(selector: (s: State) => T): T;
+export function useTournamentStore<T>(selector: (s: State) => T): () => T;
 export function useTournamentStore<T>(selector?: (s: State) => T) {
   if (selector) {
-    return selector(store);
+    return () => selector(store);
   }
 
   const init: InitFn<State> = (state) => _setStore(() => state);

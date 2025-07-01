@@ -39,7 +39,7 @@ func main() {
 
 		playerCtr := controllers.NewPlayersController(app)
 		protectedRouter.GET("v1/players", playerCtr.HandleGetAllPlayers)
-		protectedRouter.GET("v1/team/players/{teamId}", playerCtr.HandleGetPlayersFromTeamId)
+		protectedRouter.GET("v1/team/{teamId}/players", playerCtr.HandleGetPlayersFromTeamId)
 
 		authCtr := controllers.NewAuthController()
 		protectedRouter.GET("v1/identity", authCtr.HandleGetIndentity)
@@ -48,6 +48,7 @@ func main() {
 		protectedRouter.GET("v1/tournament/{id}", tournamentCtr.HandleGetTournamentById)
 
 		protectedRouter.GET("v1/team/{id}", teamsCtr.HandleGetTeamById)
+		protectedRouter.GET("v1/tournament/{tournamentId}/teams", teamsCtr.HandleGetTeamsByTournamentId)
 
 		scordCardCtr := controllers.NewScoreCardController(app)
 		protectedRouter.POST("v1/score_cards", scordCardCtr.HandleCreateScoreCardsForTeam)
@@ -59,6 +60,9 @@ func main() {
 		holesCtr := controllers.NewHolesController(app)
 		protectedRouter.GET("v1/holes/{teamId}/{tournamentId}", holesCtr.HandleGetAllTournamentHolesForTeam)
 		protectedRouter.PUT("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
+
+		leaderboardCtr := controllers.NewLeaderboardController(app)
+		protectedRouter.GET("v1/tournament/{tournamentId}/leaderboard", leaderboardCtr.HandleGetLeaderboard)
 
 		// APP
 		se.Router.GET("/{path...}", apis.Static(ui.DistDirFS, true)).

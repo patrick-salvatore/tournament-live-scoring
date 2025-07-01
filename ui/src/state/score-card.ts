@@ -1,8 +1,5 @@
-// import { createWithSignal, createWithStore } from "solid-zustand";
-
 import { createStore, type SetStoreFunction } from "solid-js/store";
 import type { ScoreCardWithHoles } from "~/lib/score-card";
-import { reduceToByIdMap } from "~/lib/utils";
 import type { InitFn } from "./helpers";
 
 type State = ScoreCardWithHoles[];

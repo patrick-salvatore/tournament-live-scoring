@@ -6,7 +6,7 @@ export type Course = {
   slope: number;
   courseRate: number;
   par: number;
-  holeLayout: Hole[];
+  holes: Hole[];
   created: string;
   updated: string;
 };

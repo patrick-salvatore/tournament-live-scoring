@@ -1,10 +1,10 @@
 import { batch, createRenderEffect, type ParentComponent } from "solid-js";
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useCurrentMatches, useLocation, useNavigate } from "@solidjs/router";
 
 import { getPlayersByTeamId } from "~/api/players";
-import { getTeamById } from "~/api/teams";
+import { getAllTeams, getTeamById } from "~/api/teams";
 import { getTournamentById } from "~/api/tournaments";
-import { getScoreCardsForTeamByTournament } from "~/api/score-cards";
+import { getScoreCardsForTeamByTournament } from "~/api/scorecards";
 import { getCourseDataByTournamentId } from "~/api/course";
 
 import type { ScoreCardWithHoles } from "~/lib/score-card";
@@ -16,12 +16,14 @@ import { usePlayerStore } from "~/state/player";
 import { useSessionStore } from "./session";
 import { useScoreCardStore } from "./score-card";
 import { useCourseStore } from "./course";
+import { identity } from "./helpers";
+import { boolean } from "zod/v4";
 
 const AppStoreSetter: ParentComponent = (props) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const sessionStore = useSessionStore();
+  const getSession = useSessionStore(identity);
   const { init: setTeamStore } = useTeamStore();
   const { init: setPlayerStore } = usePlayerStore();
   const { init: setCourseStore } = useCourseStore();
@@ -29,15 +31,15 @@ const AppStoreSetter: ParentComponent = (props) => {
   const { init: scoreCardStore } = useScoreCardStore();
 
   createRenderEffect(() => {
-    const session = sessionStore.session();
+    const session = getSession();
     (async function _() {
-      if (!session.teamId || !session.tourneyId) {
+      if (!session?.teamId || !session?.tourneyId) {
         return;
       }
 
-      const [tournament, team, players, course] = await Promise.all([
+      const [tournament, teams, players, course] = await Promise.all([
         getTournamentById(session.tourneyId),
-        getTeamById(session.teamId),
+        getAllTeams(session.tourneyId),
         getPlayersByTeamId(session.teamId),
         getCourseDataByTournamentId(session.tourneyId),
       ]);
@@ -54,13 +56,17 @@ const AppStoreSetter: ParentComponent = (props) => {
 
       batch(() => {
         setTournamentStore(tournament);
-        setTeamStore(team);
+        setTeamStore(teams);
         setPlayerStore(players);
         scoreCardStore(scoreCards);
         setCourseStore(course);
       });
 
-      if (location.pathname == "/tournament") {
+      const locationParts = location.pathname.split("/").filter(Boolean);
+      if (
+        locationParts.length == 1 &&
+        locationParts.find((key) => key == "tournament")
+      ) {
         navigate(`/tournament/${tournament.uuid}`, { replace: true });
       }
     })();

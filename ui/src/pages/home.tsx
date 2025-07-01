@@ -1,5 +1,4 @@
 import { createForm, useField, Form as _Form } from "@gapu/formix";
-import { useNavigate } from "@solidjs/router";
 import { useMutation } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
 import { z } from "zod";
@@ -33,8 +32,6 @@ const TeamUuidField = () => {
 };
 
 const TeamForm = () => {
-  const navigate = useNavigate();
-
   const form = createForm({
     schema: z.object({
       teamId: z.string(),
