@@ -21,7 +21,6 @@ export type HoleWithMetadata = {
   teamId: string;
   playerHandicap: number;
   awardedTournamentHandicap: number;
-  strokeHole: boolean;
 };
 
 export type UpdateHolePayload = Partial<Hole>;

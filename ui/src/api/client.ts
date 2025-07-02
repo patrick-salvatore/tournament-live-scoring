@@ -1,5 +1,4 @@
 import axios, { type CreateAxiosDefaults } from "axios";
-import toast from "~/components/toast";
 import { getJwt } from "~/lib/auth";
 
 const CLIENT_CONFIG: CreateAxiosDefaults = {

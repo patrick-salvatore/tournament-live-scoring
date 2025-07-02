@@ -9,33 +9,12 @@
   "7": { "par": 3, "handicap": 15 },
   "8": { "par": 4, "handicap": 7 },
   "9": { "par": 5, "handicap": 4 },
-  "10": {
-    "par": 3,
-    "handicap": 6
-  },
-  "11": {
-    "par": 4,
-    "handicap": 12
-  },
-  "12": {
-    "par": 4,
-    "handicap": 14
-  },
-  "13": {
-    "par": 4,
-    "handicap": 18
-  },
-  "14": {
-    "par": 5,
-    "handicap": 2
-  },
-  "15": {
-    "par": 4,
-    "handicap": 16
-  },
-  "16": {
-    "par": 3,
-    "handicap": 10
-  },
+  "10": { "par": 3, "handicap": 6 },
+  "11": { "par": 4, "handicap": 12 },
+  "12": { "par": 4, "handicap": 14 },
+  "13": { "par": 4, "handicap": 18 },
+  "14": { "par": 5, "handicap": 2 },
+  "15": { "par": 4, "handicap": 16 },
+  "16": { "par": 3, "handicap": 10 },
   "17": { "par": 4, "handicap": 8 }
 }

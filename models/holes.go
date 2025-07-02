@@ -9,12 +9,16 @@ import (
 )
 
 type Hole struct {
-	Id       string  `db:"id" json:"id"`
-	Score    string  `db:"score" json:"score"`
-	Par      float64 `db:"par" json:"par"`
-	Handicap float64 `db:"handicap" json:"handicap"`
-	Number   float64 `db:"number" json:"number"`
-	PlayerId string  `db:"player_id" json:"playerId"`
+	Id       string `db:"id" json:"id"`
+	Score    string `db:"score" json:"score"`
+	Par      int    `db:"par" json:"par"`
+	Handicap int    `db:"handicap" json:"handicap"`
+	Number   int    `db:"number" json:"number"`
+	PlayerId string `db:"player_id" json:"playerId"`
+
+	PlayerHandicap            float64 `db:"player_handicap" json:"-"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"-"`
+	StrokeHole                bool    `json:"strokeHole"`
 }
 
 func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
@@ -58,16 +62,17 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 		NewQuery(`
 			SELECT 
 				holes.*,
-				teams.id AS team_id
+				players.handicap AS player_handicap,
+				tournaments.awarded_handicap as awarded_handicap
 			FROM holes
 			JOIN players ON holes.player_id = players.id
-			JOIN teams ON players.team_id = teams.id
-			WHERE holes.tournament_id = {:tournament_id} AND teams.id = {:team_id}
-			ORDER BY holes.player_id, holes.number
+			JOIN teams ON teams.id = players.team_id 
+			JOIN tournaments ON tournaments.id = holes.tournament_id
+			WHERE holes.tournament_id = {:tournament_id}
+			ORDER BY  holes.number
 		`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,
-			"team_id":       teamId,
 		}).
 		All(&holes)
 
@@ -85,7 +90,6 @@ func GetHolesForTournamentId(db dbx.Builder, tournamentId string) (*[]Hole, erro
 		NewQuery(`
 			SELECT 
 				holes.*,
-				teams.id AS team_id
 			FROM holes
 			JOIN players ON holes.player_id = players.id
 			JOIN teams ON players.team_id = teams.id
@@ -105,20 +109,20 @@ func GetHolesForTournamentId(db dbx.Builder, tournamentId string) (*[]Hole, erro
 }
 
 type HoleWithMetadata struct {
-	Id                        string  `db:"id" json:"id"`
-	Score                     string  `db:"score" json:"score"`
-	Par                       int     `db:"par" json:"par"`
-	Handicap                  int     `db:"handicap" json:"handicap"`
-	Number                    int     `db:"number" json:"number"`
-	PlayerId                  string  `db:"player_name" json:"playerId"`
-	PlayerName                string  `db:"player_name" json:"playerName"`
-	TeamId                    string  `db:"team_id" json:"teamId"`
-	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
-	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedHandicap"`
-	StrokeHole                bool    `json:"strokeHole"`
+	Id                        string  `db:"id"`
+	Score                     string  `db:"score"`
+	Par                       int     `db:"par"`
+	Handicap                  int     `db:"handicap"`
+	Number                    int     `db:"number"`
+	PlayerId                  string  `db:"player_name"`
+	PlayerName                string  `db:"player_name"`
+	TeamId                    string  `db:"team_id"`
+	PlayerHandicap            float64 `db:"player_handicap"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap"`
+	StrokeHole                bool
 }
 
-func GetHolesWithAScoreForTournamentId(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
+func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
 	var holes []HoleWithMetadata
 
 	err := db.

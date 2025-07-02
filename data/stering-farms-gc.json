@@ -1,41 +1,20 @@
 {
-  "0": { "par": 4, "handicap": 1 },
-  "1": { "par": 5, "handicap": 9 },
-  "2": { "par": 4, "handicap": 13 },
-  "3": { "par": 4, "handicap": 11 },
-  "4": { "par": 3, "handicap": 17 },
-  "5": { "par": 5, "handicap": 5 },
-  "6": { "par": 4, "handicap": 3 },
-  "7": { "par": 3, "handicap": 15 },
-  "8": { "par": 4, "handicap": 7 },
-  "9": { "par": 5, "handicap": 4 },
-  "10": {
-    "par": 3,
-    "handicap": 6
-  },
-  "11": {
-    "par": 4,
-    "handicap": 12
-  },
-  "12": {
-    "par": 4,
-    "handicap": 14
-  },
-  "13": {
-    "par": 4,
-    "handicap": 18
-  },
-  "14": {
-    "par": 5,
-    "handicap": 2
-  },
-  "15": {
-    "par": 4,
-    "handicap": 16
-  },
-  "16": {
-    "par": 3,
-    "handicap": 10
-  },
-  "17": { "par": 4, "handicap": 8 }
+  "0": { "par": 4, "handicap": 11 },
+  "1": { "par": 5, "handicap": 15 },
+  "2": { "par": 4, "handicap": 17 },
+  "3": { "par": 4, "handicap": 1 },
+  "4": { "par": 3, "handicap": 7 },
+  "5": { "par": 5, "handicap": 13},
+  "6": { "par": 4, "handicap": 9 },
+  "7": { "par": 3, "handicap": 3 },
+  "8": { "par": 4, "handicap": 5 },
+  "9": { "par": 4, "handicap": 12 },
+  "10": { "par": 4, "handicap": 10 },
+  "11": { "par": 4, "handicap": 4 },
+  "12": { "par": 5, "handicap": 8 },
+  "13": { "par": 4, "handicap": 2 },
+  "14": { "par": 3, "handicap": 14 },
+  "15": { "par": 4, "handicap": 16 },
+  "16": { "par": 3, "handicap": 6 },
+  "17": { "par": 5, "handicap": 18 }
 }

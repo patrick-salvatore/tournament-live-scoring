@@ -9,11 +9,7 @@ const TournamentView: ParentComponent = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useSessionStore(identity);
-  const teamStore = useTeamStore();
-
-  const team = createMemo(() => {
-    return selectTeamById(session()?.teamId)(teamStore.store);
-  });
+  const team = useTeamStore((s) => selectTeamById(session()?.teamId)(s));
 
   const currentTab = createMemo(() => {
     if (location.pathname.endsWith("scorecard")) return "scorecard";

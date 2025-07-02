@@ -51,6 +51,8 @@ const Leaderboard = () => {
               {(row) => {
                 const isTied = teams.length > 1;
                 const pos = position() + 1;
+                const netScore = row.netScore;
+
                 return (
                   <TableRow>
                     <TableCell class="font-medium">
@@ -60,7 +62,11 @@ const Leaderboard = () => {
                     <TableCell class="font-medium">{row.teamName}</TableCell>
 
                     <TableCell class="text-right">
-                      {row.netScore === 0 ? "E" : row.netScore}
+                      {netScore === 0
+                        ? "E"
+                        : netScore < 0
+                        ? netScore
+                        : `+${netScore}`}
                     </TableCell>
                     <TableCell class="text-center">{row.thru}</TableCell>
                   </TableRow>

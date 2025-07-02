@@ -1,6 +1,12 @@
 package models
 
-import "github.com/pocketbase/dbx"
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/pocketbase/dbx"
+)
 
 type Team struct {
 	Id           string `db:"id" json:"id"`
@@ -8,6 +14,8 @@ type Team struct {
 	DisplayName  string `db:"display_name" json:"displayName"`
 	Token        string `db:"token" json:"token"`
 	TournamentId string `db:"tournament_id" json:"tournamentId"`
+	Finished     bool   `db:"finished" json:"finished"`
+	Started      bool   `db:"started" json:"started"`
 }
 
 func GetTeamsByTournamentId(db dbx.Builder, tournamentId string) (*[]Team, error) {
@@ -82,4 +90,54 @@ func GetTeamByIdWithTournamentData(db dbx.Builder, id string) (*TeamWithTourname
 	}
 
 	return &team, nil
+}
+
+type TeamUpdate struct {
+	Name        *string `json:"name,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
+	Finished    *bool   `json:"finished,omitempty"`
+	Started     *bool   `json:"started,omitempty"`
+}
+
+func UpdateTeam(db dbx.Builder, teamId string, updates TeamUpdate) (*TeamUpdate, error) {
+	var setParts []string
+	params := dbx.Params{"teamId": teamId}
+
+	if updates.Name != nil {
+		params["name"] = *updates.Name
+		setParts = append(setParts, "name = {:name}")
+	}
+	if updates.DisplayName != nil {
+		params["displayName"] = *updates.DisplayName
+		setParts = append(setParts, "displayName = {:displayName}")
+	}
+	if updates.Finished != nil {
+		params["finished"] = *updates.Finished
+		setParts = append(setParts, "finished = {:finished}")
+	}
+	if updates.Started != nil {
+		params["started"] = *updates.Started
+		setParts = append(setParts, "started = {:started}")
+	}
+
+	if len(setParts) == 0 {
+		return nil, fmt.Errorf("no fields to update")
+	}
+
+	// Always update the 'updated' timestamp
+	setParts = append(setParts, "updated = {:updated}")
+	params["updated"] = time.Now().Format(time.RFC3339)
+
+	query := fmt.Sprintf(`
+		UPDATE teams 
+		SET %s 
+		WHERE id = {:teamId}
+	`, strings.Join(setParts, ", "))
+
+	_, err := db.NewQuery(query).Bind(params).Execute()
+	if err != nil {
+		return nil, err
+	}
+
+	return &updates, nil
 }

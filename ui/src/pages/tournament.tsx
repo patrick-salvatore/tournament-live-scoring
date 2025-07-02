@@ -3,8 +3,6 @@ import { createForm, Form as _Form } from "@gapu/formix";
 import { createEffect, For } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { createScoreCardsForTeam } from "~/api/scorecards";
-
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -18,31 +16,28 @@ import { FormError } from "~/components/ui/form";
 
 import { useSessionStore } from "~/state/session";
 import { selectPlayerList, usePlayerStore } from "~/state/player";
-import { useScoreCardStore } from "~/state/score-card";
 import { identity } from "~/state/helpers";
+import { selectTeamById, useTeamStore } from "~/state/team";
+import { startTournament } from "~/api/tournaments";
 
 export default function Tournament() {
   const navigate = useNavigate();
-  const players = usePlayerStore(identity);
+  const players = usePlayerStore(selectPlayerList);
   const session = useSessionStore(identity);
-  const scoreCards = () => useScoreCardStore(identity);
-  const { init } = useScoreCardStore();
+  const team = useTeamStore(selectTeamById(session()?.teamId));
 
   const form = createForm<any, { error?: string }>({
     schema: z.any(),
     initialState: {},
-    onSubmit: () => startTournament(),
+    onSubmit: () => handleStartTournament(),
   });
 
-  const startTournament = async () => {
+  const handleStartTournament = async () => {
     form.setState("error", () => null);
     try {
-      if (session()?.teamId && session()?.tourneyId) {
-        const scoreCards = await createScoreCardsForTeam({
-          teamId: session()?.teamId!,
-          tournamentId: session()?.tourneyId!,
-        });
-        init(scoreCards);
+      const _session = session();
+      if (_session) {
+        await startTournament(_session);
         navigate(`/tournament/${session()?.teamId}/scoreCard`, {
           replace: true,
         });
@@ -53,7 +48,8 @@ export default function Tournament() {
   };
 
   createEffect(() => {
-    if (scoreCards().length) {
+    const _team = team();
+    if (_team?.started) {
       navigate(`/tournament/${session()?.teamId}/scoreCard`, {
         replace: true,
       });
@@ -70,7 +66,7 @@ export default function Tournament() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <For each={selectPlayerList(players)}>
+          <For each={players()}>
             {(player) => (
               <TableRow>
                 <TableCell class="font-medium">{player.name}</TableCell>

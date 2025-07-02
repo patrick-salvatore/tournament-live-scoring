@@ -15,11 +15,11 @@ import AppShell from "~/components/shell";
 import TournamentView from "~/components/tournament-view";
 import { Toaster, TOAST_POSITION } from "~/components/toast";
 
-import Home from "./pages/home";
+import TeamIdentity from "./pages";
 import Tournament from "./pages/tournament";
-import LeaderBoard from "./pages/leader-board";
-import SessionRedirectGuard from "./components/session-redirect-guard";
-import ScoreCardRoute from "./pages/score-card";
+import LeaderBoard from "./pages/leaderboard";
+import SessionRedirectGuard from "./components/session_redirect_guard";
+import ScoreCardRoute from "./pages/scorecard";
 
 const root = document.getElementById("root");
 
@@ -51,7 +51,7 @@ render(
               path="*"
               component={() => (
                 <SessionRedirectGuard>
-                  <Home />
+                  <TeamIdentity />
                 </SessionRedirectGuard>
               )}
             />

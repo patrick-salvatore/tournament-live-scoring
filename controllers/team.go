@@ -17,17 +17,6 @@ func NewTeamsController(app core.App) *TeamsController {
 	return &TeamsController{app: app, db: app.DB()}
 }
 
-func (tc *TeamsController) HandleGetTeamsByTournamentId(e *core.RequestEvent) error {
-	tournamentId := e.Request.PathValue("tournamentId")
-	teams, err := models.GetTeamsByTournamentId(tc.db, tournamentId)
-
-	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
-
-	return e.JSON(http.StatusOK, teams)
-}
-
 func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
 	id := e.Request.PathValue("id")
 	players, err := models.GetTeamById(tc.db, id)
@@ -40,15 +29,7 @@ func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
 }
 
 func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
-	info, err := e.RequestInfo()
-	if err != nil {
-		return e.BadRequestError(err.Error(), nil)
-	}
-
-	teamId, ok := info.Body["teamId"].(string)
-	if !ok || teamId == "" {
-		return e.BadRequestError("Invalid or missing teamId", nil)
-	}
+	teamId := e.Request.PathValue("teamId")
 
 	team, err := models.GetTeamByIdWithTournamentData(tc.db, teamId)
 	if err != nil {
@@ -69,4 +50,46 @@ func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 	}
 
 	return e.JSON(http.StatusOK, map[string]string{"token": jwt})
+}
+
+func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("teamId")
+
+	team, err := models.GetTeamById(tc.db, teamId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	course, err := models.GetCourseByTournamentId(tc.db, team.TournamentId)
+	if err != nil {
+		return err
+	}
+	courseHoleMap := getHoleDataMap(course)
+
+	holes, err := models.GetHolesForTeam(tc.db, teamId, team.TournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	holesWithStrokeHole := []models.Hole{}
+	for _, hole := range *holes {
+		holeIndex := (courseHoleMap)[hole.Number].Handicap
+
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, hole.AwardedTournamentHandicap, holeIndex)
+
+		holesWithStrokeHole = append(holesWithStrokeHole, hole)
+	}
+
+	return e.JSON(http.StatusOK, holesWithStrokeHole)
+}
+
+func (tc *TeamsController) HandleGetTeamPlayers(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("teamId")
+	players, err := models.GetPlayersFromTeamId(tc.db, teamId)
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, players)
 }

@@ -13,10 +13,10 @@ export function usePlayerStore(): {
   set: SetStoreFunction<State>;
   init: InitFn<Player[]>;
 };
-export function usePlayerStore<T>(selector: (s: State) => T): T;
+export function usePlayerStore<T>(selector: (s: State) => T): () => T;
 export function usePlayerStore<T>(selector?: (s: State) => T) {
   if (selector) {
-    return selector(store);
+    return () => selector(store);
   }
 
   const init: InitFn<Player[]> = (state) =>

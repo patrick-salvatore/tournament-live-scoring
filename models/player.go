@@ -11,20 +11,6 @@ type Player struct {
 	TeamId   string  `db:"team_id" json:"teamId"`
 }
 
-func GetPlayers(db dbx.Builder) (*[]Player, error) {
-	players := []Player{}
-
-	err := db.
-		NewQuery("SELECT * FROM players").
-		All(&players)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &players, nil
-}
-
 func GetPlayersFromTeamId(db dbx.Builder, teamId string) (*[]Player, error) {
 	players := []Player{}
 

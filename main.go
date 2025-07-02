@@ -21,11 +21,17 @@ func main() {
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		router := se.Router.Group("/")
+		protectedRouter := se.Router.Group("/").BindFunc(middleware.WithJWTVerify(app))
 
 		router.GET("v1/heathz", controllers.HandleHealthzRequest)
 
+		// /auth
+		authCtr := controllers.NewAuthController()
+		protectedRouter.GET("v1/identity", authCtr.HandleGetIndentity)
+
+		// /team
 		teamsCtr := controllers.NewTeamsController(app)
-		router.POST("v1/team/_assign", teamsCtr.HandleAssignPlayerTeam).
+		router.POST("v1/team/{teamId}/assign", teamsCtr.HandleAssignPlayerTeam).
 			BindFunc(func(e *core.RequestEvent) error {
 				unescaped := e.Request.PathValue("uuid")
 				escaped := html.EscapeString(unescaped)
@@ -33,35 +39,24 @@ func main() {
 
 				return e.Next()
 			})
-
-		protectedRouter := se.Router.Group("/").BindFunc(middleware.WithJWTVerify(app))
-
-		playerCtr := controllers.NewPlayersController(app)
-		protectedRouter.GET("v1/players", playerCtr.HandleGetAllPlayers)
-		protectedRouter.GET("v1/team/{teamId}/players", playerCtr.HandleGetPlayersFromTeamId)
-
-		authCtr := controllers.NewAuthController()
-		protectedRouter.GET("v1/identity", authCtr.HandleGetIndentity)
-
-		tournamentCtr := controllers.NewTournamentController(app)
-		protectedRouter.GET("v1/tournament/{id}", tournamentCtr.HandleGetTournamentById)
-
 		protectedRouter.GET("v1/team/{id}", teamsCtr.HandleGetTeamById)
-		protectedRouter.GET("v1/tournament/{tournamentId}/teams", teamsCtr.HandleGetTeamsByTournamentId)
+		protectedRouter.GET("v1/team/{teamId}/holes", teamsCtr.HandleGetTeamHoles)
+		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetTeamPlayers)
 
-		scordCardCtr := controllers.NewScoreCardController(app)
-		protectedRouter.POST("v1/score_cards", scordCardCtr.HandleCreateScoreCardsForTeam)
-		protectedRouter.GET("v1/score_cards/{tournamentId}/{teamId}", scordCardCtr.HandleGetScoreCardsForTeam)
+		// /tournament
+		tournamentCtr := controllers.NewTournamentController(app)
+		protectedRouter.GET("v1/tournament/{tournamentId}", tournamentCtr.HandleGetTournamentById)
+		protectedRouter.GET("v1/tournament/{tournamentId}/teams", tournamentCtr.HandleGetTeamsByTournamentId)
+		protectedRouter.POST("v1/tournament/{tournamentId}/team/{teamId}/start", tournamentCtr.HandleStartTournamentForTeam)
+		protectedRouter.GET("v1/tournament/{tournamentId}/leaderboard", tournamentCtr.HandleGetLeaderboard)
 
+		// /course
 		courseCtr := controllers.NewCourseController(app)
 		protectedRouter.GET("v1/course/{tournamentId}", courseCtr.HandleGetCourseByTournamentId)
 
+		// /holes
 		holesCtr := controllers.NewHolesController(app)
-		protectedRouter.GET("v1/holes/{teamId}/{tournamentId}", holesCtr.HandleGetAllTournamentHolesForTeam)
-		protectedRouter.PUT("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
-
-		leaderboardCtr := controllers.NewLeaderboardController(app)
-		protectedRouter.GET("v1/tournament/{tournamentId}/leaderboard", leaderboardCtr.HandleGetLeaderboard)
+		protectedRouter.PATCH("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
 
 		// APP
 		se.Router.GET("/{path...}", apis.Static(ui.DistDirFS, true)).

@@ -10,21 +10,25 @@ import { ChevronLeft, ChevronRight } from "lucide-solid";
 import { unwrap } from "solid-js/store";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/solid-query";
 
-import { Bottomsheet } from "~/components/bottom-sheet";
+import { Bottomsheet } from "~/components/bottom_sheet";
 import { Button } from "~/components/ui/button";
 
-import { selectPlayerList, usePlayerStore } from "~/state/player";
-import { selectCourseHoles, useCourseStore } from "~/state/course";
+import { usePlayerStore } from "~/state/player";
+import { useCourseStore } from "~/state/course";
 import { identity } from "~/state/helpers";
 import { useSessionStore } from "~/state/session";
-import { useTournamentStore } from "~/state/tournament";
 
-import { getStrokeHole, groupByIdMap, reduceToByIdMap } from "~/lib/utils";
+import { groupByIdMap, reduceToByIdMap } from "~/lib/utils";
 import type { Score, Hole, UpdateHolePayload } from "~/lib/hole";
 
-import { getAllTournamentHolesForTeam, updateHoleScores } from "~/api/holes";
 import { Route } from "@solidjs/router";
-import { useTeamStore } from "~/state/team";
+import { selectTeamById, useTeamStore } from "~/state/team";
+import { getTeamHoles, updateTeam } from "~/api/teams";
+import { updateHoleScores } from "~/api/holes";
+import type { PlayerId } from "~/lib/player";
+
+const FIRST_HOLE = 1;
+const NUM_HOLES = 18;
 
 interface GolfScoreButtonProps {
   score: number | string;
@@ -126,44 +130,32 @@ type ScoreData = {
   holeIndex: number;
 } | null;
 
-type UpdateScoreFn = (data: {
-  playerId: string;
-  holeIndex: number;
-  score: Score;
-}) => void;
+type UpdateScoreFn = (data: { playerId: string; score: Score }) => void;
 
-export type HoleScores = Record<string, Hole>;
-
-const FIRST_HOLE = 1;
-const NUM_HOLES = 18;
+export type HoleScores = Record<PlayerId, Hole>;
 
 const ScoreCard = () => {
   const queryClient = useQueryClient();
 
   const players = usePlayerStore(identity);
   const session = useSessionStore(identity);
-  const tournamentStore = useTournamentStore(identity);
-  const playerStore = usePlayerStore(identity);
-  const courseStore = useCourseStore(identity);
+  const course = useCourseStore(identity);
+  const team = useTeamStore(selectTeamById(session()?.teamId));
 
-  const [currentHole, setCurrentHole] = createSignal(FIRST_HOLE);
-  const [scoreData, setScoreData] = createSignal<ScoreData>(null);
+  const [showUnsavedModal, setShowUnsavedModal] = createSignal<number>();
+  const [currentHoleNumber, setCurrentHoleNumber] = createSignal(FIRST_HOLE);
+
+  const [openScorePanelData, setOpenScorePanelData] =
+    createSignal<ScoreData>(null);
+
   const [currentHoleScoreData, setCurrentHoleScoreData] =
     createSignal<HoleScores>({});
-  const [showUnsavedModal, setShowUnsavedModal] = createSignal<number>();
-
-  const getHoles = () => holes?.()?._;
 
   const queryKey = ["holes"];
 
   const holesQuery = useQuery(() => ({
     queryKey: queryKey,
-    queryFn: () => {
-      return getAllTournamentHolesForTeam({
-        teamId: session()?.teamId!,
-        tournamentId: session()?.tourneyId!,
-      });
-    },
+    queryFn: () => getTeamHoles(session()?.teamId!),
     throwOnError: true,
     initialData: [],
   }));
@@ -185,77 +177,67 @@ const ScoreCard = () => {
   }));
 
   const holes = createMemo(() => {
-    let currentHole = 0;
-    let isFinished = true;
-
-    const holesWithStroke = holesQuery.data?.map((hole) => {
-      const player = playerStore?.[hole.playerId];
-      const awardedHandicap = tournamentStore().awardedHandicap;
-      const strokeHole = getStrokeHole({
-        awardedHandicap,
-        holeHandicap: hole.handicap,
-        playerHandicap: player?.handicap,
-        slope: courseStore.slope || 130,
-      });
-
-      if (!hole.score) {
-        currentHole = currentHole || hole.number;
-        isFinished = false;
-      }
-
-      return { ...hole, strokeHole };
-    });
-
-    return {
-      _: groupByIdMap(holesWithStroke, "number"),
-      currentHole: currentHole || 1,
-      isFinished: isFinished,
-    };
+    return groupByIdMap(holesQuery.data, "number");
   });
 
-  const currentPlayingHole = createMemo(() => {
-    const hole = Object.entries(getHoles()).find(([, holes]) => {
-      return holes.every((h) => !h.score);
-    });
+  const thruHole = createMemo(() => {
+    const hole = Object.entries(holes()).find(([, hole]) =>
+      unwrap(hole).find((hole) => !hole.score)
+    );
 
-    return hole ? +hole[0] : currentHole();
+    if (hole) {
+      return +hole[0] < NUM_HOLES ? +hole[0] : NUM_HOLES;
+    }
+
+    return 1;
   });
 
-  const allScoresEntered = createMemo(() =>
-    Object.values(currentHoleScoreData()).every((data) => data.score)
+  const courseHole = createMemo(
+    () => course().holes?.[currentHoleNumber() - 1]
   );
 
-  const tournamentHolesMap = createMemo(() =>
-    reduceToByIdMap(unwrap(getHoles()[currentHole()] || []), "playerId")
-  );
+  const isTeamFinished = createMemo(() => {
+    return team()?.finished;
+  });
 
   const hasUnsavedChanges = createMemo(() => {
-    const originalMap = tournamentHolesMap();
+    const originalHoles = holes()?.[currentHoleNumber()];
     const currentData = currentHoleScoreData();
 
-    if (!originalMap || !currentData) return false;
+    if (!originalHoles || !currentData) return false;
+    return (
+      originalHoles.some((hole) => {
+        const currentScore = currentData[hole.playerId]?.score;
+        const originalScore = hole.score;
+        return currentScore && originalScore !== currentScore;
+      }) && currentHoleNumber() <= thruHole()
+    );
+  });
 
-    return Object.keys(currentData).some((playerId) => {
-      const originalScore = originalMap[playerId]?.score;
-      const currentScore = currentData[playerId]?.score;
+  const canSave = createMemo(() => {
+    const allPlayersHaveAScore = Object.values(currentHoleScoreData()).every(
+      (hole) => hole.score
+    );
 
-      return originalScore !== currentScore;
-    });
+    return allPlayersHaveAScore && hasUnsavedChanges();
   });
 
   createEffect(() => {
-    const _holes = getHoles();
+    setCurrentHoleNumber(thruHole());
+  });
 
-    if (_holes[currentHole()]) {
-      setCurrentHoleScoreData(
-        reduceToByIdMap(unwrap(_holes?.[currentHole()]), "playerId")
-      );
+  createEffect(async () => {
+    const playerHoles = holes()[currentHoleNumber()];
+
+    if (playerHoles) {
+      setCurrentHoleScoreData(reduceToByIdMap(playerHoles, "playerId"));
     }
   });
 
-  createEffect(() => {
-    const _currentHole = holes()?.currentHole;
-    setCurrentHole((prev) => (prev != _currentHole ? _currentHole : prev));
+  createEffect(async () => {
+    if (isTeamFinished() && team()?.id) {
+      await updateTeam(team()?.id!, { finished: true });
+    }
   });
 
   const goToPreviousHole = () => {
@@ -264,8 +246,8 @@ const ScoreCard = () => {
       return;
     }
 
-    if (currentHole() > FIRST_HOLE) {
-      setCurrentHole(currentHole() - 1);
+    if (courseHole().number > FIRST_HOLE) {
+      setCurrentHoleNumber(currentHoleNumber() - 1);
     }
   };
 
@@ -274,8 +256,8 @@ const ScoreCard = () => {
       setShowUnsavedModal(1);
       return;
     }
-    if (currentHole() < NUM_HOLES) {
-      setCurrentHole(currentHole() + 1);
+    if (currentHoleNumber() < NUM_HOLES) {
+      setCurrentHoleNumber(currentHoleNumber() + 1);
     }
   };
 
@@ -283,7 +265,7 @@ const ScoreCard = () => {
     setShowUnsavedModal();
     const next = NUM_HOLES + direction;
     if (FIRST_HOLE < next || next > NUM_HOLES) {
-      setCurrentHole(currentHole() + direction);
+      setCurrentHoleNumber(currentHoleNumber() + direction);
     }
   };
 
@@ -296,14 +278,14 @@ const ScoreCard = () => {
       ...prev,
       [playerId]: { ...prev[playerId], score: score },
     }));
-    setScoreData(null);
+    setOpenScorePanelData(null);
   };
 
   const openScorePad = (playerId: string, strokeHole: boolean) => {
-    setScoreData({
+    setOpenScorePanelData({
       playerId,
       strokeHole,
-      holeIndex: currentHole(),
+      holeIndex: currentHoleNumber(),
     });
   };
 
@@ -318,50 +300,34 @@ const ScoreCard = () => {
     saveMutation?.mutate(payload);
   };
 
-  const handleClear = () => {
-    setCurrentHoleScoreData((prev) =>
-      Object.entries(prev || {}).reduce(
-        (acc, [key, hole]) => ({
-          ...acc,
-          [key]: { ...hole, score: 0 },
-        }),
-        {}
-      )
-    );
-  };
-
   return (
     <>
       <div class=" bg-white rounded-lg shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
           <button
             onClick={goToPreviousHole}
-            disabled={currentHole() === FIRST_HOLE}
+            disabled={courseHole().number === FIRST_HOLE}
             class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={24} />
           </button>
 
           <div class="text-center">
-            <Show when={holes()?.currentHole}>
+            <Show when={courseHole()}>
               <h2 class="text-2xl font-bold text-gray-800">
-                Hole {currentHole()}
+                Hole {courseHole().number}
               </h2>
             </Show>
             <div class="flex items-center justify-center space-x-4 text-sm text-gray-600">
-              <span>
-                Par {selectCourseHoles(courseStore)[currentHole()]?.par}
-              </span>
+              <span>Par {courseHole()?.par}</span>
               <span>•</span>
-              <span>
-                Index {selectCourseHoles(courseStore)[currentHole()]?.handicap}
-              </span>
+              <span>Index {courseHole()?.handicap}</span>
             </div>
           </div>
 
           <button
             onClick={goToNextHole}
-            disabled={currentHole() === NUM_HOLES}
+            disabled={courseHole().number === NUM_HOLES}
             class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight size={24} />
@@ -377,7 +343,7 @@ const ScoreCard = () => {
             <div
               class="bg-green-500 h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${(currentHole() / NUM_HOLES) * 100}%`,
+                width: `${(courseHole().number / NUM_HOLES) * 100}%`,
               }}
             />
           </div>
@@ -385,15 +351,14 @@ const ScoreCard = () => {
 
         <Show when={holes?.()}>
           <div class="space-y-4">
-            <For each={selectPlayerList(players)}>
-              {(player) => {
-                const isStrokeHole = () =>
-                  currentHoleScoreData()?.[player.id]?.strokeHole;
+            <For each={Object.entries(currentHoleScoreData())}>
+              {([playerId, hole]) => {
+                const player = players()[playerId];
                 return (
                   <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-2 relative">
                       <h3 class="font-semibold text-gray-800">{player.name}</h3>
-                      <Show when={isStrokeHole()}>
+                      <Show when={hole.strokeHole}>
                         <div class="absolute -right-5 top-0 flex items-center space-x-1">
                           <div class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
                             <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
@@ -406,11 +371,11 @@ const ScoreCard = () => {
                       <Button
                         variant="ghost"
                         onClick={() =>
-                          openScorePad(player.id, Boolean(isStrokeHole()))
+                          openScorePad(player.id, Boolean(hole.strokeHole))
                         }
                         disabled={saveMutation?.isPending}
                         class={`w-16 h-12 text-lg font-bold border-2 rounded-md transition-colors flex items-center justify-center ${
-                          isStrokeHole()
+                          hole.strokeHole
                             ? "border-red-300 hover:border-red-500 bg-red-50"
                             : "border-gray-300 hover:border-blue-500"
                         } ${
@@ -420,10 +385,10 @@ const ScoreCard = () => {
                         }`}
                       >
                         <Show
-                          when={currentHoleScoreData()?.[player.id]?.score}
+                          when={hole?.score}
                           fallback={<span class="text-gray-400">—</span>}
                         >
-                          {currentHoleScoreData()?.[player.id]?.score}
+                          {hole?.score}
                         </Show>
                       </Button>
                     </div>
@@ -433,15 +398,11 @@ const ScoreCard = () => {
             </For>
           </div>
 
-          <Show when={!holes().isFinished}>
+          <Show when={!isTeamFinished()}>
             <div class="mt-6 flex space-x-3">
               <Button
                 onClick={handleSave}
-                disabled={
-                  !allScoresEntered() ||
-                  currentPlayingHole() !== currentHole() ||
-                  saveMutation?.isPending
-                }
+                disabled={!canSave() || saveMutation?.isPending}
                 class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
               >
                 <Show when={saveMutation?.isPending} fallback="Save Hole">
@@ -450,14 +411,6 @@ const ScoreCard = () => {
                     <span>Saving...</span>
                   </div>
                 </Show>
-              </Button>
-
-              <Button
-                onClick={handleClear}
-                disabled={saveMutation?.isPending}
-                class="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Clear
               </Button>
             </div>
           </Show>
@@ -475,12 +428,12 @@ const ScoreCard = () => {
         </div>
       </div>
 
-      <Show when={scoreData() && !holes().isFinished}>
+      <Show when={openScorePanelData() && !isTeamFinished()}>
         <Bottomsheet
           variant="snap"
           defaultSnapPoint={({ maxHeight }) => maxHeight / 2 + 75}
           snapPoints={({ maxHeight }) => [maxHeight / 2 + 75]}
-          onClose={() => setScoreData(null)}
+          onClose={() => setOpenScorePanelData(null)}
         >
           <div class="mt-6 px-4">
             <div class="grid grid-cols-3 justify-center">
@@ -497,11 +450,10 @@ const ScoreCard = () => {
                     <div class={gridBorders}>
                       <GolfScoreButton
                         score={score}
-                        par={selectCourseHoles(courseStore)[currentHole()]?.par}
+                        par={courseHole()?.par}
                         onClick={() => {
                           updateScore({
-                            playerId: scoreData()!.playerId,
-                            holeIndex: scoreData()!.holeIndex,
+                            playerId: openScorePanelData()!.playerId,
                             score,
                           });
                         }}
@@ -546,7 +498,7 @@ const ScoreCard = () => {
   );
 };
 
-const ScoreCardRoute = () => {
+export default () => {
   const teamStore = useTeamStore();
   const matches = createMemo(() => {
     const keys = Object.keys(teamStore.store);
@@ -565,5 +517,3 @@ const ScoreCardRoute = () => {
     />
   );
 };
-
-export default ScoreCardRoute;

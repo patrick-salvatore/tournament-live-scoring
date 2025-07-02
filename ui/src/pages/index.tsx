@@ -41,20 +41,19 @@ const TeamForm = () => {
       error: null,
     },
     onSubmit: async (state) => {
-      mutation.mutate({ teamId: state.teamId });
       Object.keys(state).forEach((key) => {
         form.setFieldMeta(key, (prev) => ({
           ...prev,
           error: null,
         }));
       });
+      mutation.mutate({ teamId: state.teamId });
     },
   });
 
   const mutation = useMutation<string, any, { teamId: string }>(() => ({
     mutationFn: ({ teamId }) => assignTeam(teamId.toLowerCase()),
     onError: (error: any) => {
-      console.log(error);
       form.setState("error", () => error.response.data.message);
     },
     onSuccess: (data) => {
