@@ -213,9 +213,13 @@ const ScoreCard = () => {
     };
   });
 
-  const isHoleComplete = createMemo(() =>
-    getHoles()[currentHole()]?.every((hole) => hole.score)
-  );
+  const currentPlayingHole = createMemo(() => {
+    const hole = Object.entries(getHoles()).find(([, holes]) => {
+      return holes.every((h) => !h.score);
+    });
+
+    return hole ? +hole[0] : currentHole();
+  });
 
   const allScoresEntered = createMemo(() =>
     Object.values(currentHoleScoreData()).every((data) => data.score)
@@ -238,9 +242,6 @@ const ScoreCard = () => {
       return originalScore !== currentScore;
     });
   });
-
-  // log
-  createEffect(() => {});
 
   createEffect(() => {
     const _holes = getHoles();
@@ -360,7 +361,7 @@ const ScoreCard = () => {
 
           <button
             onClick={goToNextHole}
-            disabled={currentHole() === NUM_HOLES || !isHoleComplete()}
+            disabled={currentHole() === NUM_HOLES}
             class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight size={24} />
@@ -436,7 +437,11 @@ const ScoreCard = () => {
             <div class="mt-6 flex space-x-3">
               <Button
                 onClick={handleSave}
-                disabled={!allScoresEntered() || saveMutation?.isPending}
+                disabled={
+                  !allScoresEntered() ||
+                  currentPlayingHole() !== currentHole() ||
+                  saveMutation?.isPending
+                }
                 class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
               >
                 <Show when={saveMutation?.isPending} fallback="Save Hole">
@@ -470,11 +475,11 @@ const ScoreCard = () => {
         </div>
       </div>
 
-      <Show when={scoreData()}>
+      <Show when={scoreData() && !holes().isFinished}>
         <Bottomsheet
           variant="snap"
-          defaultSnapPoint={({ maxHeight }) => maxHeight / 2}
-          snapPoints={({ maxHeight }) => [maxHeight / 2]}
+          defaultSnapPoint={({ maxHeight }) => maxHeight / 2 + 75}
+          snapPoints={({ maxHeight }) => [maxHeight / 2 + 75]}
           onClose={() => setScoreData(null)}
         >
           <div class="mt-6 px-4">

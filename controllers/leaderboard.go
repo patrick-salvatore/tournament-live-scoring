@@ -69,39 +69,39 @@ func (lc *LeaderboardController) HandleGetLeaderboard(e *core.RequestEvent) erro
 
 		leaderboardRow.TeamId = teamId
 
-		holeNumber := 0
-		for holeNumber <= 17 {
-			teamHoles := teamHolesMap[holeNumber+1]
-			if len(teamHoles) == 0 {
+		thruCount := 0
+		for _, teamScoreOnHole := range teamHolesMap {
+			if len(teamScoreOnHole) == 0 {
 				break
 			}
 
-			leaderboardRow.Thru = holeNumber + 1
-
 			var holePar int
 			var netScore int
-			var grossScore = 1000
+			var grossScore int
 
-			for _, hole := range teamHoles {
+			for _, hole := range teamScoreOnHole {
 				players[hole.PlayerName] = true
 
-				holeScore, err := strconv.Atoi(hole.Score)
-				if err != nil {
-					break
-				}
+				if len(hole.Score) > 0 && hole.Score != "X" {
+					holeScore, _ := strconv.Atoi(hole.Score)
 
-				if holeScore <= grossScore {
-					netScore = holeScore
-					grossScore = holeScore
+					if holeScore <= grossScore || grossScore == 0 {
+						netScore = holeScore
+						grossScore = holeScore
 
-					if hole.StrokeHole {
-						netScore = holeScore - 1
+						if hole.StrokeHole {
+							netScore = holeScore - 1
+						}
 					}
+					holePar = hole.Par
 				}
-				holePar = hole.Par
 			}
 
-			holeNumber++
+			if netScore > 0 || grossScore > 0 {
+				thruCount++
+			}
+
+			leaderboardRow.Thru = thruCount
 			leaderboardRow.Gross -= holePar - grossScore
 			leaderboardRow.Net -= holePar - netScore
 		}
@@ -116,7 +116,7 @@ func (lc *LeaderboardController) HandleGetLeaderboard(e *core.RequestEvent) erro
 	}
 
 	sort.Slice(leaderboardRows, func(i, j int) bool {
-		return leaderboardRows[i].Net < leaderboardRows[j].Net
+		return leaderboardRows[j].Net > leaderboardRows[i].Net
 	})
 	return e.JSON(http.StatusOK, leaderboardRows)
 }
@@ -136,9 +136,7 @@ func groupHolesByTeamAndPlayer(holes []models.HoleWithMetadata) map[string]map[i
 		if _, ok := result[teamID]; !ok {
 			result[teamID] = make(map[int][]models.HoleWithMetadata)
 		}
-		if len(hole.Score) > 0 {
-			result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
-		}
+		result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
 	}
 
 	return result

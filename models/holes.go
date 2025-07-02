@@ -153,8 +153,8 @@ func CreateHoleForPlayer(db dbx.Builder, playerId string, tournamentId string, c
 
 	err := db.
 		NewQuery(`
-		INSERT INTO holes (tournament_id, player_id, number, par, handicap)
-		VALUES ({:tournament_id}, {:player_id}, {:number}, {:par}, {:handicap})
+		INSERT INTO holes (tournament_id, player_id, number, par, handicap, created, updated)
+		VALUES ({:tournament_id}, {:player_id}, {:number}, {:par}, {:handicap}, {:created}, {:updated})
 		RETURNING *
 	`).
 		Bind(dbx.Params{
@@ -163,6 +163,8 @@ func CreateHoleForPlayer(db dbx.Builder, playerId string, tournamentId string, c
 			"number":        courseHole.Number,
 			"par":           courseHole.Par,
 			"handicap":      courseHole.Handicap,
+			"created":       time.Now().Format(time.RFC3339),
+			"updated":       time.Now().Format(time.RFC3339),
 		}).
 		One(&hole)
 

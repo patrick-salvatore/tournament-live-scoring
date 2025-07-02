@@ -52,7 +52,7 @@ const TeamForm = () => {
   });
 
   const mutation = useMutation<string, any, { teamId: string }>(() => ({
-    mutationFn: ({ teamId }) => assignTeam(teamId),
+    mutationFn: ({ teamId }) => assignTeam(teamId.toLowerCase()),
     onError: (error: any) => {
       console.log(error);
       form.setState("error", () => error.response.data.message);

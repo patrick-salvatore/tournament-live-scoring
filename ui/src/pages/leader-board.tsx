@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, For } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
@@ -26,12 +26,11 @@ const Leaderboard = () => {
   }));
 
   const leaderBoard = createMemo(() => {
-    const sortedByName = holesQuery.data.sort((a, b) =>
-      a.teamName < b.teamName ? 1 : -1
-    );
-    const groupByScore = groupByIdMap(sortedByName, "netScore");
+    const groupByScore = groupByIdMap(holesQuery.data, "netScore");
 
-    return Object.entries(groupByScore);
+    return Object.entries(groupByScore).sort((a, b) => {
+      return +a[0] > +b[0] ? 1 : -1;
+    });
   });
 
   return (
@@ -61,9 +60,7 @@ const Leaderboard = () => {
                     <TableCell class="font-medium">{row.teamName}</TableCell>
 
                     <TableCell class="text-right">
-                      <Show when={row.netScore < 0} fallback="E">
-                        {row.netScore}
-                      </Show>
+                      {row.netScore === 0 ? "E" : row.netScore}
                     </TableCell>
                     <TableCell class="text-center">{row.thru}</TableCell>
                   </TableRow>
