@@ -9,7 +9,7 @@ import { createAsync, Route, Router, useNavigate } from "@solidjs/router";
 
 import { authCheck } from "~/lib/auth";
 
-import AppStoreSetter, { SessionCheck } from "~/state";
+import AppStoreSetter from "~/state";
 
 import AppShell from "~/components/shell";
 
@@ -39,13 +39,11 @@ render(
             preload={() => createAsync(async () => authCheck())}
             component={AppStoreSetter}
           >
-            <Route component={SessionCheck}>
-              <AssignRoute />
-              <ScoreCardRoute />
-              <LeaderBoard />
+            <ScoreCardRoute />
+            <AssignRoute />
+            <LeaderBoard />
 
-              <Route path="*" component={TeamIdentity} />
-            </Route>
+            <Route path="*" component={TeamIdentity} />
           </Route>
           <Route
             path="*"

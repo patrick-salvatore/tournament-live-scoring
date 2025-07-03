@@ -39,7 +39,7 @@ function Tournament() {
           tournamentId: tournament().id,
         });
       }
-      navigate(`/tournament/${team().id}/scorecard`, {
+      navigate(`/tournament/scorecard`, {
         replace: true,
       });
     } catch (e) {
@@ -78,22 +78,5 @@ function Tournament() {
 }
 
 export default () => {
-  const tournament = useTournamentStore(identity);
-
-  const matches = createMemo(() => {
-    const escaped = tournament().id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = `^(${escaped})$`;
-
-    return new RegExp(pattern);
-  });
-
-  return (
-    <Route
-      path=":id"
-      matchFilters={{
-        id: matches(),
-      }}
-      component={Tournament}
-    />
-  );
+  return <Route path="start" component={Tournament} />;
 };

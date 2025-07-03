@@ -18,7 +18,7 @@ const TournamentView: ParentComponent = (props) => {
 
   const handleTabChange = (value: string) => {
     if (value === "scorecard") {
-      navigate(`/tournament/${team()?.id}/scorecard`);
+      navigate(`/tournament/scorecard`);
     } else {
       navigate(`/tournament/leaderboard`);
     }

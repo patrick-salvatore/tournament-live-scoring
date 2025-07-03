@@ -62,7 +62,7 @@ const TeamForm = () => {
     onSuccess: (data) => {
       authStore.save(data.token);
 
-      navigate(`/tournament/${data.tournamentId}`, { replace: true });
+      navigate(`/tournament/start`, { replace: true });
     },
   }));
 

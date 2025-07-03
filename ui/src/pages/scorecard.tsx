@@ -1,6 +1,7 @@
 import {
   createEffect,
   createMemo,
+  createResource,
   createSignal,
   For,
   Show,
@@ -23,7 +24,7 @@ import type { Score, Hole, UpdateHolePayload } from "~/lib/hole";
 import { Route } from "@solidjs/router";
 import { selectTeamPlayersMap, useTeamStore } from "~/state/team";
 import { getTeamHoles, updateTeam } from "~/api/teams";
-import { updateHoleScores } from "~/api/holes";
+import { updateHoles } from "~/api/holes";
 import type { PlayerId } from "~/lib/team";
 import TournamentView from "~/components/tournament_view";
 
@@ -155,24 +156,23 @@ const ScoreCard = () => {
   const holesQuery = useQuery(() => ({
     queryKey: queryKey,
     queryFn: () => getTeamHoles(session()?.teamId!),
-    throwOnError: true,
     initialData: [],
   }));
 
+  const handleSaveMutation = async (holes: UpdateHolePayload[]) => {
+    return updateHoles(holes).then(() => {
+      if (currentHoleNumber() === NUM_HOLES) {
+        return updateTeam(team()?.id!, { finished: true });
+      }
+    });
+  };
+
   const saveMutation = useMutation<any, any, UpdateHolePayload[], any>(() => ({
-    mutationFn: updateHoleScores,
-    onMutate: async (newHoles) => {
-      await queryClient.cancelQueries({ queryKey });
-      const prevHole = queryClient.getQueryData(queryKey);
-
-      queryClient.setQueryData(queryKey, newHoles);
-
-      return { prevHole, newHoles };
-    },
+    mutationFn: handleSaveMutation,
     onError: (_, __, context) => {
       queryClient.setQueryData(queryKey, context.newHoles);
     },
-    onSettled: (_) => queryClient.invalidateQueries({ queryKey: queryKey }),
+    onSettled: (_) => queryClient.invalidateQueries({ queryKey }),
   }));
 
   const teamPlayers = createMemo(() => selectTeamPlayersMap(team()));
@@ -186,8 +186,12 @@ const ScoreCard = () => {
       unwrap(hole).find((hole) => !hole.score)
     );
 
+    if (team().finished) {
+      return NUM_HOLES;
+    }
+
     if (hole) {
-      return +hole[0] < NUM_HOLES ? +hole[0] : NUM_HOLES;
+      return +hole[0];
     }
 
     return 1;
@@ -196,10 +200,6 @@ const ScoreCard = () => {
   const courseHole = createMemo(
     () => course().holes?.[currentHoleNumber() - 1]
   );
-
-  const isTeamFinished = createMemo(() => {
-    return team()?.finished;
-  });
 
   const hasUnsavedChanges = createMemo(() => {
     const originalHoles = holes()?.[currentHoleNumber()];
@@ -232,12 +232,6 @@ const ScoreCard = () => {
 
     if (playerHoles) {
       setCurrentHoleScoreData(reduceToByIdMap(playerHoles, "playerId"));
-    }
-  });
-
-  createEffect(async () => {
-    if (isTeamFinished() && team()?.id) {
-      await updateTeam(team()?.id!, { finished: true });
     }
   });
 
@@ -355,15 +349,22 @@ const ScoreCard = () => {
             <For each={Object.entries(currentHoleScoreData())}>
               {([playerId, hole]) => {
                 const player = teamPlayers()?.[playerId];
+
                 return (
                   <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-2 relative">
                       <h3 class="font-semibold text-gray-800">{player.name}</h3>
                       <Show when={hole.strokeHole}>
-                        <div class="absolute -right-5 top-0 flex items-center space-x-1">
-                          <div class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                            <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-                          </div>
+                        <div
+                          class={`flex space-x-1 items-center align-top relative -top-1`}
+                        >
+                          {Array(hole.strokeHole)
+                            .fill(null)
+                            .map(() => (
+                              <div class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                              </div>
+                            ))}
                         </div>
                       </Show>
                     </div>
@@ -397,7 +398,7 @@ const ScoreCard = () => {
             </For>
           </div>
 
-          <Show when={!isTeamFinished()}>
+          <Show when={!team().finished}>
             <div class="mt-6 flex space-x-3">
               <Button
                 onClick={handleSave}
@@ -427,7 +428,7 @@ const ScoreCard = () => {
         </div>
       </div>
 
-      <Show when={openScorePanelData() && !isTeamFinished()}>
+      <Show when={openScorePanelData() && !team().finished}>
         <Bottomsheet
           variant="snap"
           defaultSnapPoint={({ maxHeight }) => maxHeight / 2 + 75}
@@ -499,21 +500,15 @@ const ScoreCard = () => {
 
 export default () => {
   const team = useTeamStore(identity);
-  const matches = createMemo(() => {
-    const escaped = team().id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = `^(${escaped})$`;
-
-    console.log(pattern);
-    return new RegExp(pattern);
-  });
 
   return (
     <Route
-      path=":teamId/scorecard"
-      component={ScoreCard}
-      matchFilters={{
-        teamId: matches(),
-      }}
+      path="/scorecard"
+      component={() => (
+        <Show when={team().id}>
+          <ScoreCard />
+        </Show>
+      )}
     />
   );
 };

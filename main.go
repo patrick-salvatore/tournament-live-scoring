@@ -40,6 +40,7 @@ func main() {
 				return e.Next()
 			})
 		protectedRouter.GET("v1/team/{teamId}", teamsCtr.HandleGetTeamById)
+		protectedRouter.PUT("v1/team/{teamId}", teamsCtr.HandleUpdateTeam)
 		protectedRouter.GET("v1/team/{teamId}/holes", teamsCtr.HandleGetTeamHoles)
 		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetTeamPlayers)
 
@@ -56,7 +57,7 @@ func main() {
 
 		// /holes
 		holesCtr := controllers.NewHolesController(app)
-		protectedRouter.PATCH("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
+		protectedRouter.PUT("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
 
 		// APP
 		se.Router.GET("/{path...}", apis.Static(ui.DistDirFS, true)).

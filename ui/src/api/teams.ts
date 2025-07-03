@@ -9,7 +9,7 @@ export async function getTeamById(teamId: string) {
 }
 
 export async function updateTeam(teamId: string, data: UpdateTeamPayload) {
-  return client.patch<Team>(`/v1/team/${teamId}`, data).then((res) => res.data);
+  return client.put<Team>(`/v1/team/${teamId}`, data).then((res) => res.data);
 }
 
 export async function getAllTeams(tournamentId: string) {

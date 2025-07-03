@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/patrick-salvatore/tournament-live-scoring/models"
@@ -40,10 +41,6 @@ func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 	team, err := models.GetTeamById(tc.db, teamId)
 	if err != nil {
 		return e.NotFoundError(err.Error(), teamId)
-	}
-
-	if team.Finished {
-		return e.InternalServerError("unable to join this team", err)
 	}
 
 	tokenData := map[string]any{
@@ -119,4 +116,21 @@ func (tc *TeamsController) HandleGetTeamHolesCount(e *core.RequestEvent) error {
 	}
 
 	return e.JSON(http.StatusOK, count)
+}
+
+func (tc *TeamsController) HandleUpdateTeam(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("teamId")
+	var teamPayload models.TeamUpdate
+
+	err := json.NewDecoder(e.Request.Body).Decode(&teamPayload)
+	if err != nil {
+		return e.BadRequestError(err.Error(), nil)
+	}
+
+	team, err := models.UpdateTeam(tc.db, teamId, teamPayload)
+	if err != nil {
+		return err
+	}
+
+	return e.JSON(http.StatusOK, team)
 }
