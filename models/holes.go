@@ -68,11 +68,12 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 			JOIN players ON holes.player_id = players.id
 			JOIN teams ON teams.id = players.team_id 
 			JOIN tournaments ON tournaments.id = holes.tournament_id
-			WHERE holes.tournament_id = {:tournament_id}
+			WHERE holes.tournament_id = {:tournament_id} and teams.id = {:team_id}
 			ORDER BY  holes.number
 		`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,
+			"team_id":       teamId,
 		}).
 		All(&holes)
 

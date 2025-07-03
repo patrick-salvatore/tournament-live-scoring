@@ -349,7 +349,7 @@ const ScoreCard = () => {
           </div>
         </div>
 
-        <Show when={holes?.()}>
+        <Show when={holes()}>
           <div class="space-y-4">
             <For each={Object.entries(currentHoleScoreData())}>
               {([playerId, hole]) => {
