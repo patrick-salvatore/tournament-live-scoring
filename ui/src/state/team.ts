@@ -1,31 +1,38 @@
-import { createStore, type SetStoreFunction } from "solid-js/store";
+import { createSignal, type Accessor, type Setter } from "solid-js";
 
-import type { Team, Teams } from "~/lib/team";
+import type { Player, PlayerId, Team } from "~/lib/team";
 import type { InitFn } from "./helpers";
 import { reduceToByIdMap } from "~/lib/utils";
 
-type TeamMap = Record<string, Team>;
+type TeamMap = Team;
 type State = TeamMap;
 
-const inititalState = {};
-const [store, _setStore] = createStore<State>(inititalState);
+const inititalState = {
+  id: "",
+  name: "",
+  displayName: "",
+  tournamentId: "",
+  started: false,
+  finished: false,
+  players: [],
+} as Team;
+const [store, _setStore] = createSignal<State>(inititalState);
 
 export function useTeamStore(): {
-  store: State;
-  set: SetStoreFunction<State>;
-  init: (state: Teams) => void;
+  store: Accessor<State>;
+  set: Setter<State>;
+  init: (state: Team) => void;
 };
 export function useTeamStore<T>(selector: (s: State) => T): () => T;
 export function useTeamStore<T>(selector?: (s: State) => T) {
   if (selector) {
-    return () => selector(store);
+    return () => selector(store());
   }
 
-  const init: InitFn<Teams> = (state) =>
-    _setStore(() => reduceToByIdMap(state, "id"));
+  const init: InitFn<Team> = (state) => _setStore(() => state);
 
   return { init, store, set: _setStore };
 }
 
-export const selectTeamById = (teamId?: string) => (state: State) =>
-  teamId ? state[teamId] : null;
+export const selectTeamPlayersMap = (state: State) =>
+  reduceToByIdMap(state.players, "id");

@@ -18,25 +18,31 @@ func NewTeamsController(app core.App) *TeamsController {
 }
 
 func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
-	id := e.Request.PathValue("id")
-	players, err := models.GetTeamById(tc.db, id)
+	teamId := e.Request.PathValue("teamId")
+	team, err := models.GetTeamById(tc.db, teamId)
 
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	return e.JSON(http.StatusOK, players)
+	return e.JSON(http.StatusOK, team)
+}
+
+type TeamAssignment struct {
+	Token        string `json:"token"`
+	TeamId       string `json:"teamId"`
+	TournamentId string `json:"tournamentId"`
 }
 
 func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 	teamId := e.Request.PathValue("teamId")
 
-	team, err := models.GetTeamByIdWithTournamentData(tc.db, teamId)
+	team, err := models.GetTeamById(tc.db, teamId)
 	if err != nil {
 		return e.NotFoundError(err.Error(), teamId)
 	}
 
-	if team.TournamentComplete {
+	if team.Finished {
 		return e.InternalServerError("unable to join this team", err)
 	}
 
@@ -44,12 +50,17 @@ func (tc *TeamsController) HandleAssignPlayerTeam(e *core.RequestEvent) error {
 		"teamId":       team.Id,
 		"tournamentId": team.TournamentId,
 	}
+
 	jwt, err := models.NewAuthToken(tokenData)
 	if err != nil {
 		return e.InternalServerError("Failed to create session JWT", err)
 	}
 
-	return e.JSON(http.StatusOK, map[string]string{"token": jwt})
+	return e.JSON(http.StatusOK, TeamAssignment{
+		Token:        jwt,
+		TeamId:       team.Id,
+		TournamentId: team.TournamentId,
+	})
 }
 
 func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
@@ -75,7 +86,7 @@ func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 	for _, hole := range *holes {
 		holeIndex := (courseHoleMap)[hole.Number].Handicap
 
-		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, hole.AwardedTournamentHandicap, holeIndex)
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, course.CourseRate, float64(course.Par), hole.AwardedTournamentHandicap, holeIndex)
 
 		holesWithStrokeHole = append(holesWithStrokeHole, hole)
 	}
@@ -92,4 +103,20 @@ func (tc *TeamsController) HandleGetTeamPlayers(e *core.RequestEvent) error {
 	}
 
 	return e.JSON(http.StatusOK, players)
+}
+
+func (tc *TeamsController) HandleGetTeamHolesCount(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("teamId")
+
+	team, err := models.GetTeamById(tc.db, teamId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	count, err := models.GetHolesCountForTeam(tc.db, teamId, team.TournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, count)
 }

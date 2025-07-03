@@ -1,5 +1,5 @@
-import type { Session } from "~/lib/session";
 import { createSignal, type Accessor, type Setter } from "solid-js";
+import type { Session } from "~/lib/auth";
 
 type State = Session | null;
 

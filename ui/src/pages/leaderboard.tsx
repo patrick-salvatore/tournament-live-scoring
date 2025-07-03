@@ -13,13 +13,15 @@ import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
 import { groupByIdMap } from "~/lib/utils";
+import TournamentView from "~/components/tournament_view";
+import { Route } from "@solidjs/router";
 
 const Leaderboard = () => {
   const session = useSessionStore(identity);
 
   const holesQuery = useQuery(() => ({
     queryKey: ["leaderboard"],
-    queryFn: () => getLeaderboard(session()?.tourneyId!),
+    queryFn: () => getLeaderboard(session()?.tournamentId!),
     throwOnError: true,
     initialData: [],
     refetchInterval: 10 * 1000,
@@ -34,50 +36,52 @@ const Leaderboard = () => {
   });
 
   return (
-    <Table>
-      <TableCaption>Live team leaderboard for the tournament.</TableCaption>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Pos.</TableHead>
-          <TableHead>Team</TableHead>
-          <TableHead class="text-right">Net</TableHead>
-          <TableHead class="text-center">Thru</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <For each={leaderBoard()}>
-          {([, teams], position) => (
-            <For each={teams}>
-              {(row) => {
-                const isTied = teams.length > 1;
-                const pos = position() + 1;
-                const netScore = row.netScore;
+    <TournamentView>
+      <Table>
+        <TableCaption>Live team leaderboard for the tournament.</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Pos.</TableHead>
+            <TableHead>Team</TableHead>
+            <TableHead class="text-right">Net</TableHead>
+            <TableHead class="text-center">Thru</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <For each={leaderBoard()}>
+            {([, teams], position) => (
+              <For each={teams}>
+                {(row) => {
+                  const isTied = teams.length > 1;
+                  const pos = position() + 1;
+                  const netScore = row.netScore;
 
-                return (
-                  <TableRow>
-                    <TableCell class="font-medium">
-                      {isTied ? `T${pos}` : pos}
-                    </TableCell>
+                  return (
+                    <TableRow>
+                      <TableCell class="font-medium">
+                        {isTied ? `T${pos}` : pos}
+                      </TableCell>
 
-                    <TableCell class="font-medium">{row.teamName}</TableCell>
+                      <TableCell class="font-medium">{row.teamName}</TableCell>
 
-                    <TableCell class="text-right">
-                      {netScore === 0
-                        ? "E"
-                        : netScore < 0
-                        ? netScore
-                        : `+${netScore}`}
-                    </TableCell>
-                    <TableCell class="text-center">{row.thru}</TableCell>
-                  </TableRow>
-                );
-              }}
-            </For>
-          )}
-        </For>
-      </TableBody>
-    </Table>
+                      <TableCell class="text-right">
+                        {netScore === 0
+                          ? "E"
+                          : netScore < 0
+                          ? netScore
+                          : `+${netScore}`}
+                      </TableCell>
+                      <TableCell class="text-center">{row.thru}</TableCell>
+                    </TableRow>
+                  );
+                }}
+              </For>
+            )}
+          </For>
+        </TableBody>
+      </Table>
+    </TournamentView>
   );
 };
 
-export default Leaderboard;
+export default () => <Route path="leaderboard" component={Leaderboard} />;

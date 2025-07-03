@@ -18,7 +18,7 @@ type Hole struct {
 
 	PlayerHandicap            float64 `db:"player_handicap" json:"-"`
 	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"-"`
-	StrokeHole                bool    `json:"strokeHole"`
+	StrokeHole                int     `json:"strokeHole"`
 }
 
 func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
@@ -84,6 +84,30 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 	return &holes, nil
 }
 
+func GetHolesCountForTeam(db dbx.Builder, teamId string, tournamentId string) (*int, error) {
+	var count int
+
+	err := db.
+		NewQuery(`
+			SELECT 
+				count(*)
+			FROM holes
+			JOIN players ON holes.player_id = players.id
+			JOIN teams ON teams.id = players.team_id 
+			WHERE teams.id = {:team_id}
+		`).
+		Bind(dbx.Params{
+			"team_id": teamId,
+		}).
+		One(&count)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &count, nil
+}
+
 func GetHolesForTournamentId(db dbx.Builder, tournamentId string) (*[]Hole, error) {
 	var holes []Hole
 
@@ -120,7 +144,7 @@ type HoleWithMetadata struct {
 	TeamId                    string  `db:"team_id"`
 	PlayerHandicap            float64 `db:"player_handicap"`
 	AwardedTournamentHandicap float64 `db:"awarded_handicap"`
-	StrokeHole                bool
+	StrokeHole                int
 }
 
 func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {

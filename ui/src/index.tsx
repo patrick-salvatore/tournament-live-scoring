@@ -2,23 +2,20 @@
 import "./index.css";
 
 import { render } from "solid-js/web";
-import { Suspense } from "solid-js";
+import { onMount, Suspense } from "solid-js";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { createAsync, Route, Router, useNavigate } from "@solidjs/router";
 
 import { authCheck } from "~/lib/auth";
 
-import AppStoreSetter from "~/state";
+import AppStoreSetter, { SessionCheck } from "~/state";
 
 import AppShell from "~/components/shell";
-import TournamentView from "~/components/tournament-view";
-import { Toaster, TOAST_POSITION } from "~/components/toast";
 
 import TeamIdentity from "./pages";
-import Tournament from "./pages/tournament";
+import AssignRoute from "./pages/assign";
 import LeaderBoard from "./pages/leaderboard";
-import SessionRedirectGuard from "./components/session_redirect_guard";
 import ScoreCardRoute from "./pages/scorecard";
 
 const root = document.getElementById("root");
@@ -42,31 +39,25 @@ render(
             preload={() => createAsync(async () => authCheck())}
             component={AppStoreSetter}
           >
-            <Route path=":uuid" component={Tournament} />
-            <Route component={TournamentView}>
+            <Route component={SessionCheck}>
+              <AssignRoute />
               <ScoreCardRoute />
-              <Route path="leaderboard" component={LeaderBoard} />
+              <LeaderBoard />
+
+              <Route path="*" component={TeamIdentity} />
             </Route>
-            <Route
-              path="*"
-              component={() => (
-                <SessionRedirectGuard>
-                  <TeamIdentity />
-                </SessionRedirectGuard>
-              )}
-            />
           </Route>
           <Route
             path="*"
             component={() => {
               const navigate = useNavigate();
-              navigate("/tournament", { replace: true });
-
+              onMount(() => {
+                navigate("/tournament", { replace: true });
+              });
               return <></>;
             }}
           />
         </Router>
-        <Toaster position={TOAST_POSITION.BOTTOM_LEFT} />
       </Suspense>
     </QueryClientProvider>
   ),

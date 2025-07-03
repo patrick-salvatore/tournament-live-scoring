@@ -13,7 +13,6 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/solid-query";
 import { Bottomsheet } from "~/components/bottom_sheet";
 import { Button } from "~/components/ui/button";
 
-import { usePlayerStore } from "~/state/player";
 import { useCourseStore } from "~/state/course";
 import { identity } from "~/state/helpers";
 import { useSessionStore } from "~/state/session";
@@ -22,10 +21,11 @@ import { groupByIdMap, reduceToByIdMap } from "~/lib/utils";
 import type { Score, Hole, UpdateHolePayload } from "~/lib/hole";
 
 import { Route } from "@solidjs/router";
-import { selectTeamById, useTeamStore } from "~/state/team";
+import { selectTeamPlayersMap, useTeamStore } from "~/state/team";
 import { getTeamHoles, updateTeam } from "~/api/teams";
 import { updateHoleScores } from "~/api/holes";
-import type { PlayerId } from "~/lib/player";
+import type { PlayerId } from "~/lib/team";
+import TournamentView from "~/components/tournament_view";
 
 const FIRST_HOLE = 1;
 const NUM_HOLES = 18;
@@ -137,10 +137,9 @@ export type HoleScores = Record<PlayerId, Hole>;
 const ScoreCard = () => {
   const queryClient = useQueryClient();
 
-  const players = usePlayerStore(identity);
   const session = useSessionStore(identity);
   const course = useCourseStore(identity);
-  const team = useTeamStore(selectTeamById(session()?.teamId));
+  const team = useTeamStore(identity);
 
   const [showUnsavedModal, setShowUnsavedModal] = createSignal<number>();
   const [currentHoleNumber, setCurrentHoleNumber] = createSignal(FIRST_HOLE);
@@ -175,6 +174,8 @@ const ScoreCard = () => {
     },
     onSettled: (_) => queryClient.invalidateQueries({ queryKey: queryKey }),
   }));
+
+  const teamPlayers = createMemo(() => selectTeamPlayersMap(team()));
 
   const holes = createMemo(() => {
     return groupByIdMap(holesQuery.data, "number");
@@ -281,7 +282,7 @@ const ScoreCard = () => {
     setOpenScorePanelData(null);
   };
 
-  const openScorePad = (playerId: string, strokeHole: boolean) => {
+  const openScorePad = (playerId: string, strokeHole: number) => {
     setOpenScorePanelData({
       playerId,
       strokeHole,
@@ -301,7 +302,7 @@ const ScoreCard = () => {
   };
 
   return (
-    <>
+    <TournamentView>
       <div class=" bg-white rounded-lg shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
           <button
@@ -353,7 +354,7 @@ const ScoreCard = () => {
           <div class="space-y-4">
             <For each={Object.entries(currentHoleScoreData())}>
               {([playerId, hole]) => {
-                const player = players()[playerId];
+                const player = teamPlayers()?.[playerId];
                 return (
                   <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-2 relative">
@@ -370,9 +371,7 @@ const ScoreCard = () => {
                     <div class="flex items-center space-x-2">
                       <Button
                         variant="ghost"
-                        onClick={() =>
-                          openScorePad(player.id, Boolean(hole.strokeHole))
-                        }
+                        onClick={() => openScorePad(player.id, hole.strokeHole)}
                         disabled={saveMutation?.isPending}
                         class={`w-16 h-12 text-lg font-bold border-2 rounded-md transition-colors flex items-center justify-center ${
                           hole.strokeHole
@@ -494,16 +493,17 @@ const ScoreCard = () => {
           </div>
         </div>
       </Show>
-    </>
+    </TournamentView>
   );
 };
 
 export default () => {
-  const teamStore = useTeamStore();
+  const team = useTeamStore(identity);
   const matches = createMemo(() => {
-    const keys = Object.keys(teamStore.store);
-    const escaped = keys.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    const pattern = `^(${escaped.join("|")})$`;
+    const escaped = team().id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = `^(${escaped})$`;
+
+    console.log(pattern);
     return new RegExp(pattern);
   });
 

@@ -27,7 +27,7 @@ func WithJWTVerify(app core.App) func(e *core.RequestEvent) error {
 			return e.Error(308, "unauthorized", "verifyJwtToken")
 		}
 
-		tourneyId, ok := claims["tournamentId"].(string)
+		tournamentId, ok := claims["tournamentId"].(string)
 		if !ok {
 			return e.Error(308, "unauthorized", "tournament_id not found")
 		}
@@ -37,14 +37,14 @@ func WithJWTVerify(app core.App) func(e *core.RequestEvent) error {
 			return e.Error(308, "unauthorized", "team_id not found")
 		}
 
-		tourney, err := models.GetTournamentById(app.DB(), tourneyId)
+		tourney, err := models.GetTournamentById(app.DB(), tournamentId)
 		if tourney.IsComplete {
 			return e.Error(308, "unauthorized", "tournament has completed")
 		}
 
 		rCtx := e.Request.Context()
-		rCtx = context.WithValue(rCtx, controllers.UserTeamId, teamId)
-		rCtx = context.WithValue(rCtx, controllers.UserTourneyId, tourneyId)
+		rCtx = context.WithValue(rCtx, controllers.TeamId, teamId)
+		rCtx = context.WithValue(rCtx, controllers.TournamentId, tournamentId)
 
 		e.Request = e.Request.WithContext(rCtx)
 

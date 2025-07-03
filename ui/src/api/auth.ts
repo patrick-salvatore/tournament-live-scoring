@@ -1,5 +1,5 @@
+import type { Session } from "~/lib/auth";
 import client from "./client";
-import type { Session } from "~/lib/session";
 
 export async function createIdentity() {
   return client.post(`/v1/identity`).then((res) => res.data);

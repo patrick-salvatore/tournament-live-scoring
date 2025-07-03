@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "@solidjs/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { createMemo, Show, Suspense, type ParentComponent } from "solid-js";
-import { selectTeamById, useTeamStore } from "~/state/team";
+import { useTeamStore } from "~/state/team";
 import { identity } from "~/state/helpers";
 import { useSessionStore } from "~/state/session";
 
@@ -9,7 +9,7 @@ const TournamentView: ParentComponent = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useSessionStore(identity);
-  const team = useTeamStore((s) => selectTeamById(session()?.teamId)(s));
+  const team = useTeamStore(identity);
 
   const currentTab = createMemo(() => {
     if (location.pathname.endsWith("scorecard")) return "scorecard";

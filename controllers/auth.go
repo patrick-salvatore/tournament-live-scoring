@@ -12,8 +12,8 @@ type AuthController struct {
 type contextKey string
 
 const (
-	UserTeamId    contextKey = "teamId"
-	UserTourneyId contextKey = "tourneyId"
+	TeamId       contextKey = "teamId"
+	TournamentId contextKey = "tournamentId"
 )
 
 func NewAuthController() *AuthController {
@@ -21,16 +21,16 @@ func NewAuthController() *AuthController {
 }
 
 type IndentityData struct {
-	TeamId    string `json:"teamId"`
-	TourneyId string `json:"tourneyId"`
+	TeamId       string `json:"teamId"`
+	TournamentId string `json:"tournamentId"`
 }
 
 func (a *AuthController) HandleGetIndentity(e *core.RequestEvent) error {
-	teamId := e.Request.Context().Value(UserTeamId).(string)
-	tourneyId := e.Request.Context().Value(UserTourneyId).(string)
+	teamId := e.Request.Context().Value(TeamId).(string)
+	tournamentId := e.Request.Context().Value(TournamentId).(string)
 
 	return e.JSON(http.StatusOK, IndentityData{
-		TeamId:    teamId,
-		TourneyId: tourneyId,
+		TeamId:       teamId,
+		TournamentId: tournamentId,
 	})
 }

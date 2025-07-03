@@ -1,7 +1,7 @@
 import type { Team, Teams, UpdateTeamPayload } from "~/lib/team";
 
 import client, { rawClient } from "./client";
-import type { Jwt } from "~/lib/auth";
+import type { TeamAssignment } from "~/lib/auth";
 import type { Hole } from "~/lib/hole";
 
 export async function getTeamById(teamId: string) {
@@ -19,9 +19,9 @@ export async function getAllTeams(tournamentId: string) {
 }
 
 export async function assignTeam(teamId: string) {
-  return rawClient.post<Jwt>(`/v1/team/${teamId}/assign`).then((res) => {
-    return res.data.token;
-  });
+  return rawClient
+    .post<TeamAssignment>(`/v1/team/${teamId}/assign`)
+    .then((res) => res.data);
 }
 
 export async function getTeamHoles(teamId: string) {

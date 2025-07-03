@@ -1,6 +1,7 @@
 export type Score = string;
+
 export type Hole = {
-  strokeHole: boolean;
+  strokeHole: number;
   id: string;
   playerId: string;
   tournamentId: string;

@@ -5,9 +5,16 @@ import { getIdentity } from "~/api/auth";
 
 import { useSessionStore } from "~/state/session";
 
+export type Session = {
+  teamId: string;
+  tournamentId: string;
+};
+
 export type Jwt = {
   token: string;
 };
+
+export type TeamAssignment = Session & Jwt;
 
 export type OnStoreChangeFunc = (token: string) => void;
 
@@ -21,11 +28,11 @@ export const authCheck = query(async () => {
 
     const { set: setSessionStore } = useSessionStore();
 
-    if (!session.tourneyId || !session.teamId) {
+    if (!session.tournamentId || !session.teamId) {
       throw redirect("/tournament");
     }
 
-    setSessionStore({ tourneyId: session.tourneyId, teamId: session.teamId });
+    setSessionStore({ tournamentId: session.tournamentId, teamId: session.teamId });
   } catch {
     throw redirect("/tournament");
   }

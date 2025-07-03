@@ -1,4 +1,5 @@
 import { createForm, useField, Form as _Form } from "@gapu/formix";
+import { useNavigate } from "@solidjs/router";
 import { useMutation } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
 import { z } from "zod";
@@ -9,7 +10,7 @@ import { LoadingButton } from "~/components/loading_button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { FieldError, FormError } from "~/components/ui/form";
 import { TextField, TextFieldRoot } from "~/components/ui/textfield";
-import authStore from "~/lib/auth";
+import authStore, { type TeamAssignment } from "~/lib/auth";
 
 const TeamUuidField = () => {
   const field = useField<string>("teamId");
@@ -32,6 +33,8 @@ const TeamUuidField = () => {
 };
 
 const TeamForm = () => {
+  const navigate = useNavigate();
+
   const form = createForm({
     schema: z.object({
       teamId: z.string(),
@@ -51,13 +54,15 @@ const TeamForm = () => {
     },
   });
 
-  const mutation = useMutation<string, any, { teamId: string }>(() => ({
+  const mutation = useMutation<TeamAssignment, any, { teamId: string }>(() => ({
     mutationFn: ({ teamId }) => assignTeam(teamId.toLowerCase()),
     onError: (error: any) => {
       form.setState("error", () => error.response.data.message);
     },
     onSuccess: (data) => {
-      authStore.save(data);
+      authStore.save(data.token);
+
+      navigate(`/tournament/${data.tournamentId}`, { replace: true });
     },
   }));
 

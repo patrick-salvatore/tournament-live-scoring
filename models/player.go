@@ -4,13 +4,6 @@ import (
 	"github.com/pocketbase/dbx"
 )
 
-type Player struct {
-	Id       string  `db:"id" json:"id"`
-	Name     string  `db:"name" json:"name"`
-	Handicap float64 `db:"handicap" json:"handicap"`
-	TeamId   string  `db:"team_id" json:"teamId"`
-}
-
 func GetPlayersFromTeamId(db dbx.Builder, teamId string) (*[]Player, error) {
 	players := []Player{}
 

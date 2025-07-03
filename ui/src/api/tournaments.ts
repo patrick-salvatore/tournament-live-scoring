@@ -1,4 +1,4 @@
-import type { Session } from "~/lib/session";
+import type { Session } from "~/lib/auth";
 import client from "./client";
 import type { Tournament } from "~/lib/tournaments";
 
@@ -8,7 +8,7 @@ export async function getTournamentById(id: string) {
 
 export async function startTournament({
   teamId,
-  tourneyId: tournamentId,
+  tournamentId: tournamentId,
 }: Session) {
   return client.post<void>(
     `/v1/tournament/${tournamentId}/team/${teamId}/start`

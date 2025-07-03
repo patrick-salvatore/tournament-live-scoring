@@ -1,7 +1,7 @@
 import z from "zod";
 import { createForm, Form as _Form } from "@gapu/formix";
-import { createEffect, For } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { createMemo, For } from "solid-js";
+import { Route, useNavigate } from "@solidjs/router";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -14,17 +14,15 @@ import {
 } from "~/components/ui/table";
 import { FormError } from "~/components/ui/form";
 
-import { useSessionStore } from "~/state/session";
-import { selectPlayerList, usePlayerStore } from "~/state/player";
 import { identity } from "~/state/helpers";
-import { selectTeamById, useTeamStore } from "~/state/team";
+import { useTeamStore } from "~/state/team";
 import { startTournament } from "~/api/tournaments";
+import { useTournamentStore } from "~/state/tournament";
 
-export default function Tournament() {
+function Tournament() {
   const navigate = useNavigate();
-  const players = usePlayerStore(selectPlayerList);
-  const session = useSessionStore(identity);
-  const team = useTeamStore(selectTeamById(session()?.teamId));
+  const team = useTeamStore(identity);
+  const tournament = useTournamentStore(identity);
 
   const form = createForm<any, { error?: string }>({
     schema: z.any(),
@@ -35,26 +33,19 @@ export default function Tournament() {
   const handleStartTournament = async () => {
     form.setState("error", () => null);
     try {
-      const _session = session();
-      if (_session) {
-        await startTournament(_session);
-        navigate(`/tournament/${session()?.teamId}/scoreCard`, {
-          replace: true,
+      if (!team().started) {
+        await startTournament({
+          teamId: team().id,
+          tournamentId: tournament().id,
         });
       }
+      navigate(`/tournament/${team().id}/scorecard`, {
+        replace: true,
+      });
     } catch (e) {
       form.setState("error", () => e);
     }
   };
-
-  createEffect(() => {
-    const _team = team();
-    if (_team?.started) {
-      navigate(`/tournament/${session()?.teamId}/scoreCard`, {
-        replace: true,
-      });
-    }
-  });
 
   return (
     <_Form context={form}>
@@ -66,7 +57,7 @@ export default function Tournament() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <For each={players()}>
+          <For each={team().players}>
             {(player) => (
               <TableRow>
                 <TableCell class="font-medium">{player.name}</TableCell>
@@ -85,3 +76,24 @@ export default function Tournament() {
     </_Form>
   );
 }
+
+export default () => {
+  const tournament = useTournamentStore(identity);
+
+  const matches = createMemo(() => {
+    const escaped = tournament().id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = `^(${escaped})$`;
+
+    return new RegExp(pattern);
+  });
+
+  return (
+    <Route
+      path=":id"
+      matchFilters={{
+        id: matches(),
+      }}
+      component={Tournament}
+    />
+  );
+};

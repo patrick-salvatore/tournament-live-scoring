@@ -99,19 +99,18 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	courseData, err := models.GetCourseByTournamentId(tc.db, tournamentId)
+	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
 		return err
 	}
 
-	courseHoleMap := getHoleDataMap(courseData)
+	courseHoleMap := getHoleDataMap(course)
 
 	for index, hole := range *holes {
 		holeIndex := (courseHoleMap)[hole.Number].Handicap
 
-		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, courseData.Slope, hole.AwardedTournamentHandicap, holeIndex)
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, course.CourseRate, float64(course.Par), hole.AwardedTournamentHandicap, holeIndex)
 		(*holes)[index] = hole
-
 	}
 
 	holesByTeamAndPlayer := groupHolesByTeamAndPlayer(*holes)
@@ -143,8 +142,8 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 						netScore = holeScore
 						grossScore = holeScore
 
-						if hole.StrokeHole {
-							netScore = holeScore - 1
+						if hole.StrokeHole > 0 {
+							netScore = holeScore - hole.StrokeHole
 						}
 					}
 					holePar = hole.Par

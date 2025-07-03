@@ -8,21 +8,33 @@ import (
 	"github.com/pocketbase/dbx"
 )
 
+type Player struct {
+	Id       string  `db:"id" json:"id"`
+	Name     string  `db:"name" json:"name"`
+	Handicap float64 `db:"handicap" json:"handicap"`
+}
+
 type Team struct {
-	Id           string `db:"id" json:"id"`
-	Name         string `db:"name" json:"name"`
-	DisplayName  string `db:"display_name" json:"displayName"`
-	Token        string `db:"token" json:"token"`
-	TournamentId string `db:"tournament_id" json:"tournamentId"`
-	Finished     bool   `db:"finished" json:"finished"`
-	Started      bool   `db:"started" json:"started"`
+	Id           string   `db:"id" json:"id"`
+	Name         string   `db:"name" json:"name"`
+	DisplayName  string   `db:"display_name" json:"displayName"`
+	Token        string   `db:"token" json:"token"`
+	TournamentId string   `db:"tournament_id" json:"tournamentId"`
+	Finished     bool     `db:"finished" json:"finished"`
+	Started      bool     `db:"started" json:"started"`
+	Players      []Player `json:"players"`
 }
 
 func GetTeamsByTournamentId(db dbx.Builder, tournamentId string) (*[]Team, error) {
 	teams := []Team{}
 
 	err := db.
-		NewQuery("SELECT * FROM teams WHERE teams.tournament_id = {:tournament_id}").
+		NewQuery(`
+			SELECT 
+				teams.*
+			FROM teams
+			WHERE teams.tournament_id = {:tournament_id}
+		`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,
 		}).
@@ -35,19 +47,44 @@ func GetTeamsByTournamentId(db dbx.Builder, tournamentId string) (*[]Team, error
 	return &teams, nil
 }
 
-func GetTeamById(db dbx.Builder, id string) (*Team, error) {
+func GetTeamById(db dbx.Builder, teamId string) (*Team, error) {
 	team := Team{}
 
 	err := db.
-		NewQuery("SELECT * FROM teams WHERE id = {:id}").
+		NewQuery(`
+			SELECT 
+				teams.*
+			FROM teams
+			WHERE teams.id = {:team_id}
+		`).
 		Bind(dbx.Params{
-			"id": id,
+			"team_id": teamId,
 		}).
 		One(&team)
 
 	if err != nil {
 		return nil, err
 	}
+
+	// Step 2: Get all players for these teams
+	var players []Player
+	err = db.
+		NewQuery(`
+			SELECT players.*, players.team_id 
+			FROM players
+			JOIN teams ON players.team_id = teams.id
+			WHERE teams.id = {:team_id}
+		`).
+		Bind(dbx.Params{
+			"team_id": teamId,
+		}).
+		All(&players)
+
+	if err != nil {
+		return nil, err
+	}
+
+	team.Players = players
 
 	return &team, nil
 }

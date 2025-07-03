@@ -39,7 +39,7 @@ func main() {
 
 				return e.Next()
 			})
-		protectedRouter.GET("v1/team/{id}", teamsCtr.HandleGetTeamById)
+		protectedRouter.GET("v1/team/{teamId}", teamsCtr.HandleGetTeamById)
 		protectedRouter.GET("v1/team/{teamId}/holes", teamsCtr.HandleGetTeamHoles)
 		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetTeamPlayers)
 
