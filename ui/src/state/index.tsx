@@ -7,7 +7,7 @@ import {
 } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 
-import { getTeamById } from "~/api/teams";
+import { getTeamById, getTeamPlayersById } from "~/api/teams";
 import { getTournamentById } from "~/api/tournaments";
 import { getCourseDataByTournamentId } from "~/api/course";
 
@@ -31,32 +31,34 @@ const AppStoreSetter: ParentComponent = (props) => {
 
   createEffect(() => {
     (async function _() {
-      console.log(session()?.teamId, session()?.tournamentId);
+      try {
+        if (!session()?.teamId || !session()?.tournamentId) {
+          return;
+        }
 
-      if (!session()?.teamId || !session()?.tournamentId) {
-        return;
-      }
+        const [tournament, team, teamPlayers, course] = await Promise.all([
+          getTournamentById(session()!.tournamentId),
+          getTeamById(session()!.teamId),
+          getTeamPlayersById(session()!.teamId),
+          getCourseDataByTournamentId(session()!.tournamentId),
+        ]);
+        
+        batch(() => {
+          setTournamentStore(tournament);
+          setTeamStore(team, teamPlayers);
+          setCourseStore(course);
+        });
 
-      const [tournament, team, course] = await Promise.all([
-        getTournamentById(session()!.tournamentId),
-        getTeamById(session()!.teamId),
-        getCourseDataByTournamentId(session()!.tournamentId),
-      ]);
-
-      batch(() => {
-        setTournamentStore(tournament);
-        setTeamStore(team);
-        setCourseStore(course);
-      });
-
-      const [, page] = location.pathname.split("/").filter(Boolean);
-
-      if (!ROUTES.find((r) => r === page)) {
-        navigate(`/tournament/scorecard`);
-      } else if (team.started) {
-        navigate(`/tournament/${page}`);
-      } else {
-        navigate(`/tournament/start`);
+        const [, page] = location.pathname.split("/").filter(Boolean);
+        if (!ROUTES.find((r) => r === page)) {
+          navigate(`/tournament/scorecard`);
+        } else if (team.started) {
+          navigate(`/tournament/${page}`);
+        } else {
+          navigate(`/tournament/start`);
+        }
+      } catch {
+        navigate(`/tournament/assign`);
       }
     })();
   });

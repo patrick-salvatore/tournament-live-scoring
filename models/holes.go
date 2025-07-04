@@ -139,7 +139,7 @@ type HoleWithMetadata struct {
 	Par                       int     `db:"par"`
 	Handicap                  int     `db:"handicap"`
 	Number                    int     `db:"number"`
-	PlayerId                  string  `db:"player_name"`
+	PlayerId                  string  `db:"player_id"`
 	PlayerName                string  `db:"player_name"`
 	TeamId                    string  `db:"team_id"`
 	PlayerHandicap            float64 `db:"player_handicap"`
@@ -155,6 +155,7 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 			SELECT 
 				holes.*,
 				teams.id AS team_id,
+				players.id AS player_id,
 				players.handicap AS player_handicap,
 				players.name AS player_name,
 				tournaments.awarded_handicap as awarded_handicap 
@@ -163,7 +164,8 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 			JOIN teams ON players.team_id = teams.id
 			JOIN tournaments ON holes.tournament_id = {:tournament_id}
 			WHERE holes.tournament_id = {:tournament_id}
-			ORDER BY holes.player_id, holes.number
+			GROUP BY holes.player_id, holes.number
+			ORDER BY holes.number
 		`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,

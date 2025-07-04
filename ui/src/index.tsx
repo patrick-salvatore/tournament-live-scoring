@@ -14,7 +14,7 @@ import AppStoreSetter from "~/state";
 import AppShell from "~/components/shell";
 
 import TeamIdentity from "./pages";
-import AssignRoute from "./pages/assign";
+import StartRoute from "./pages/start_tournament";
 import LeaderBoard from "./pages/leaderboard";
 import ScoreCardRoute from "./pages/scorecard";
 
@@ -40,7 +40,7 @@ render(
             component={AppStoreSetter}
           >
             <ScoreCardRoute />
-            <AssignRoute />
+            <StartRoute />
             <LeaderBoard />
 
             <Route path="*" component={TeamIdentity} />

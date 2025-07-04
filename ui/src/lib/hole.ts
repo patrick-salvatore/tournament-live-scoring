@@ -20,7 +20,7 @@ export type HoleWithMetadata = {
   number: number;
   playerId: string;
   teamId: string;
-  playerHandicap: number;
+  playerHandicap: string;
   awardedTournamentHandicap: number;
 };
 

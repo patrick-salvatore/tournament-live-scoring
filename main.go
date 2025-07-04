@@ -42,14 +42,17 @@ func main() {
 		protectedRouter.GET("v1/team/{teamId}", teamsCtr.HandleGetTeamById)
 		protectedRouter.PUT("v1/team/{teamId}", teamsCtr.HandleUpdateTeam)
 		protectedRouter.GET("v1/team/{teamId}/holes", teamsCtr.HandleGetTeamHoles)
-		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetTeamPlayers)
+		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetPlayersByTeamId)
 
 		// /tournament
 		tournamentCtr := controllers.NewTournamentController(app)
 		protectedRouter.GET("v1/tournament/{tournamentId}", tournamentCtr.HandleGetTournamentById)
-		protectedRouter.GET("v1/tournament/{tournamentId}/teams", tournamentCtr.HandleGetTeamsByTournamentId)
 		protectedRouter.POST("v1/tournament/{tournamentId}/team/{teamId}/start", tournamentCtr.HandleStartTournamentForTeam)
 		protectedRouter.GET("v1/tournament/{tournamentId}/leaderboard", tournamentCtr.HandleGetLeaderboard)
+
+		// /tournament - misc.
+		router.GET("v1/tournament/{tournamentId}/team-sheet", tournamentCtr.HandleGetTeamSheetFromTournament)
+		router.POST("v1/tournament/{tournamentId}/teams", tournamentCtr.HandleCreateTournamentTeams)
 
 		// /course
 		courseCtr := controllers.NewCourseController(app)

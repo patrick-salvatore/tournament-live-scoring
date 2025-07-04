@@ -1,6 +1,6 @@
 import { createSignal, type Accessor, type Setter } from "solid-js";
 
-import type { Player, PlayerId, Team } from "~/lib/team";
+import type { Player, PlayerId, Team, TeamProps } from "~/lib/team";
 import type { InitFn } from "./helpers";
 import { reduceToByIdMap } from "~/lib/utils";
 
@@ -21,7 +21,7 @@ const [store, _setStore] = createSignal<State>(inititalState);
 export function useTeamStore(): {
   store: Accessor<State>;
   set: Setter<State>;
-  init: (state: Team) => void;
+  init: (team: TeamProps, players: Player[]) => Team;
 };
 export function useTeamStore<T>(selector: (s: State) => T): () => T;
 export function useTeamStore<T>(selector?: (s: State) => T) {
@@ -29,7 +29,8 @@ export function useTeamStore<T>(selector?: (s: State) => T) {
     return () => selector(store());
   }
 
-  const init: InitFn<Team> = (state) => _setStore(() => state);
+  const init = (team: TeamProps, players: Player[]) =>
+    _setStore(() => ({ ...team, players }));
 
   return { init, store, set: _setStore };
 }

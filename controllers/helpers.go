@@ -35,22 +35,6 @@ func joinNames(names []string) string {
 	return strings.Join(names, ", ")
 }
 
-func groupHolesByTeamAndPlayer(holes []models.HoleWithMetadata) map[string]map[int][]models.HoleWithMetadata {
-	result := make(map[string]map[int][]models.HoleWithMetadata)
-
-	for _, hole := range holes {
-		teamID := hole.TeamId
-		holeNumber := hole.Number
-
-		if _, ok := result[teamID]; !ok {
-			result[teamID] = make(map[int][]models.HoleWithMetadata)
-		}
-		result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
-	}
-
-	return result
-}
-
 func getHoleDataMap(course *models.CourseWithHoles) models.CourseHoleDataMap {
 	courseHoleMap := make(models.CourseHoleDataMap)
 	for _, hole := range course.Holes {

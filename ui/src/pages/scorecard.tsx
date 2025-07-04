@@ -1,7 +1,6 @@
 import {
   createEffect,
   createMemo,
-  createResource,
   createSignal,
   For,
   Show,
@@ -313,6 +312,7 @@ const ScoreCard = () => {
                 Hole {courseHole().number}
               </h2>
             </Show>
+
             <div class="flex items-center justify-center space-x-4 text-sm text-gray-600">
               <span>Par {courseHole()?.par}</span>
               <span>•</span>
@@ -341,6 +341,17 @@ const ScoreCard = () => {
                 width: `${(courseHole().number / NUM_HOLES) * 100}%`,
               }}
             />
+          </div>
+        </div>
+
+        <div class="mb-4 rounded-lg">
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+              <span>Stroke hole</span>
+            </div>
           </div>
         </div>
 
@@ -374,11 +385,7 @@ const ScoreCard = () => {
                         variant="ghost"
                         onClick={() => openScorePad(player.id, hole.strokeHole)}
                         disabled={saveMutation?.isPending}
-                        class={`w-16 h-12 text-lg font-bold border-2 rounded-md transition-colors flex items-center justify-center ${
-                          hole.strokeHole
-                            ? "border-red-300 hover:border-red-500 bg-red-50"
-                            : "border-gray-300 hover:border-blue-500"
-                        } ${
+                        class={`w-16 h-12 text-lg font-bold border-2 rounded-md transition-colors flex items-center justify-center border-gray-300  ${
                           saveMutation?.isPending
                             ? "opacity-50 cursor-not-allowed"
                             : ""
@@ -415,17 +422,6 @@ const ScoreCard = () => {
             </div>
           </Show>
         </Show>
-
-        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div class="flex items-center justify-between text-xs text-gray-600">
-            <div class="flex items-center space-x-2">
-              <div class="w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-              </div>
-              <span>Stroke hole</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <Show when={openScorePanelData() && !team().finished}>

@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { createMemo, For } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
@@ -15,6 +15,7 @@ import { identity } from "~/state/helpers";
 import { groupByIdMap } from "~/lib/utils";
 import TournamentView from "~/components/tournament_view";
 import { Route } from "@solidjs/router";
+import { useTournamentStore } from "~/state/tournament";
 
 const Leaderboard = () => {
   const session = useSessionStore(identity);
@@ -22,9 +23,8 @@ const Leaderboard = () => {
   const holesQuery = useQuery(() => ({
     queryKey: ["leaderboard"],
     queryFn: () => getLeaderboard(session()?.tournamentId!),
-    throwOnError: true,
     initialData: [],
-    refetchInterval: 10 * 1000,
+    // refetchInterval: 10 * 1000,
   }));
 
   const leaderBoard = createMemo(() => {
@@ -38,7 +38,6 @@ const Leaderboard = () => {
   return (
     <TournamentView>
       <Table>
-        <TableCaption>Live team leaderboard for the tournament.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Pos.</TableHead>
@@ -71,7 +70,7 @@ const Leaderboard = () => {
                           ? netScore
                           : `+${netScore}`}
                       </TableCell>
-                      <TableCell class="text-center">{row.thru}</TableCell>
+                      <TableCell class="text-center">{row.thru ? row.thru : "-"}</TableCell>
                     </TableRow>
                   );
                 }}
@@ -84,4 +83,17 @@ const Leaderboard = () => {
   );
 };
 
-export default () => <Route path="leaderboard" component={Leaderboard} />;
+export default () => {
+  const tournament = useTournamentStore(identity);
+
+  return (
+    <Route
+      path="leaderboard"
+      component={() => (
+        <Show when={tournament().id}>
+          <Leaderboard />
+        </Show>
+      )}
+    />
+  );
+};

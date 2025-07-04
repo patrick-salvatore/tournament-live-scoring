@@ -1,10 +1,14 @@
 package controllers
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/jung-kurt/gofpdf"
 	"github.com/patrick-salvatore/tournament-live-scoring/models"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -28,17 +32,6 @@ func (tc *TournamentController) HandleGetTournamentById(e *core.RequestEvent) er
 	}
 
 	return e.JSON(http.StatusOK, tournament)
-}
-
-func (tc *TournamentController) HandleGetTeamsByTournamentId(e *core.RequestEvent) error {
-	tournamentId := e.Request.PathValue("tournamentId")
-	teams, err := models.GetTeamsByTournamentId(tc.db, tournamentId)
-
-	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
-
-	return e.JSON(http.StatusOK, teams)
 }
 
 func (tc *TournamentController) HandleStartTournamentForTeam(e *core.RequestEvent) error {
@@ -83,6 +76,173 @@ func (tc *TournamentController) HandleStartTournamentForTeam(e *core.RequestEven
 	return e.JSON(http.StatusCreated, "OK")
 }
 
+func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.RequestEvent) error {
+	tournamentId := e.Request.PathValue("tournamentId")
+
+	tournament, err := models.GetTournamentById(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+	players, err := models.GetTournamentPlayers(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	var start = 0
+	var end = len(*players) - 1
+
+	teams := []string{}
+	for start <= end {
+		teams = append(teams, fmt.Sprintf(`%s (%v) + %s (%v)`, (*players)[start].Name, (*players)[start].Handicap, (*players)[end].Name, (*players)[end].Handicap))
+		start++
+		end--
+	}
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+
+	pdf.SetFont("Arial", "B", 20)
+	pdf.Cell(190, 15, tournament.Name)
+	pdf.Ln(20)
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(190, 10, "Team List")
+	pdf.Ln(15)
+
+	pdf.SetFont("Arial", "", 12)
+
+	for i, team := range teams {
+		if i%2 == 0 {
+			pdf.SetFillColor(240, 240, 240)
+		} else {
+			pdf.SetFillColor(255, 255, 255)
+		}
+
+		pdf.SetDrawColor(0, 0, 0)
+		pdf.SetLineWidth(0.2)
+
+		pdf.CellFormat(20, 10, fmt.Sprintf("%d", i+1), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(170, 10, team, "1", 1, "L", true, 0, "")
+	}
+
+	var buf bytes.Buffer
+	err = pdf.Output(&buf)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, "Failed to generate PDF", nil)
+	}
+
+	fileName := fmt.Sprintf("%s_teams.pdf", strings.ToLower(strings.Join(strings.Split(tournament.Name, " "), "_")))
+
+	e.Response.Header().Set("Content-Type", "application/pdf")
+	e.Response.Header().Set("Content-Disposition", "attachment; filename="+fileName)
+	e.Response.Header().Set("Content-Length", fmt.Sprintf("%d", buf.Len()))
+
+	_, err = e.Response.Write(buf.Bytes())
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, "Failed to write PDF response", nil)
+	}
+
+	return e.JSON(http.StatusOK, "OK")
+}
+
+func (tc *TournamentController) HandleCreateTournamentTeams(e *core.RequestEvent) error {
+	tournamentId := e.Request.PathValue("tournamentId")
+
+	players, err := models.GetTournamentPlayers(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	tournament, err := models.GetTournamentById(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	teams, err := generateTeams(players, tournament)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+	err = tc.app.RunInTransaction(func(txDb core.App) error {
+		for i, team := range *teams {
+			newTeam, err := models.CreateTeam(txDb.DB(), team.Team.TournamentId, team.Team.Name)
+			if err != nil {
+				return err
+			}
+
+			teamId := newTeam.Id
+			for _, player := range team.Players {
+				_, err = models.UpdatePlayer(txDb.DB(), player.Id, models.PlayerUpdate{
+					TeamId: &teamId,
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+			(*teams)[i].Team.Id = newTeam.Id
+		}
+
+		return nil
+	})
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, teams)
+}
+
+func generateTeams(players *[]models.Player, tournament *models.Tournament) (*[]models.TeamWithPlayerCreate, error) {
+	teamSize := int(tournament.TeamCount)
+	if teamSize <= 0 {
+		return nil, fmt.Errorf("invalid TeamCount, must be at least 1")
+	}
+	if len(*(players))%teamSize != 0 {
+		return nil, fmt.Errorf(fmt.Sprintf("player count (%d) must be divisible by team size (%d)", len(*(players)), teamSize))
+	}
+
+	teamCount := len(*(players)) / teamSize
+	teams := make([]models.TeamWithPlayerCreate, teamCount)
+	for i := range teamCount {
+		teams[i] = models.TeamWithPlayerCreate{
+			Team: models.TeamCreate{
+				TournamentId: tournament.Id,
+			},
+			Players: []models.Player{},
+		}
+	}
+
+	forward := true
+	index := 0
+
+	for _, player := range *(players) {
+		teams[index].Players = append(teams[index].Players, player)
+
+		if forward {
+			index++
+			if index == teamCount {
+				index = teamCount - 1
+				forward = false
+			}
+		} else {
+			index--
+			if index < 0 {
+				index = 0
+				forward = true
+			}
+		}
+	}
+
+	for i, team := range teams {
+		playerNames := []string{}
+		for _, player := range team.Players {
+			playerNames = append(playerNames, fmt.Sprintf(`%s (%v)`, player.Name, player.Handicap))
+		}
+		teams[i].Team.Name = strings.Join(playerNames, " + ")
+	}
+
+	return &teams, nil
+}
+
 type LeaderboardRow struct {
 	TeamId   string `json:"teamId"`
 	TeamName string `json:"teamName"`
@@ -94,17 +254,16 @@ type LeaderboardRow struct {
 func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
 
-	holes, err := models.GetHolesForLeaderboard(tc.db, tournamentId)
-	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
-
 	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
 		return err
 	}
-
 	courseHoleMap := getHoleDataMap(course)
+
+	holes, err := models.GetHolesForLeaderboard(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
 
 	for index, hole := range *holes {
 		holeIndex := (courseHoleMap)[hole.Number].Handicap
@@ -172,4 +331,20 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		return leaderboardRows[j].Net > leaderboardRows[i].Net
 	})
 	return e.JSON(http.StatusOK, leaderboardRows)
+}
+
+func groupHolesByTeamAndPlayer(holes []models.HoleWithMetadata) map[string]map[int][]models.HoleWithMetadata {
+	result := make(map[string]map[int][]models.HoleWithMetadata)
+
+	for _, hole := range holes {
+		teamID := hole.TeamId
+		holeNumber := hole.Number
+
+		if _, ok := result[teamID]; !ok {
+			result[teamID] = make(map[int][]models.HoleWithMetadata)
+		}
+		result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
+	}
+
+	return result
 }

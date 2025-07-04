@@ -7,13 +7,16 @@ export type Player = {
   teamId: string;
 };
 
-export type Team = {
+export type TeamProps = {
   id: string;
   name: string;
   displayName: string;
   tournamentId: string;
   started: boolean;
   finished: boolean;
+};
+
+export type Team = TeamProps & {
   players: Player[];
 };
 
