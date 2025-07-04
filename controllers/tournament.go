@@ -83,19 +83,9 @@ func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.Request
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
-	players, err := models.GetTournamentPlayers(tc.db, tournamentId)
+	teams, err := models.GetTeamsByTournamentId(tc.db, tournamentId)
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
-
-	var start = 0
-	var end = len(*players) - 1
-
-	teams := []string{}
-	for start <= end {
-		teams = append(teams, fmt.Sprintf(`%s (%v) + %s (%v)`, (*players)[start].Name, (*players)[start].Handicap, (*players)[end].Name, (*players)[end].Handicap))
-		start++
-		end--
 	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
@@ -111,7 +101,7 @@ func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.Request
 
 	pdf.SetFont("Arial", "", 12)
 
-	for i, team := range teams {
+	for i, team := range *teams {
 		if i%2 == 0 {
 			pdf.SetFillColor(240, 240, 240)
 		} else {
@@ -122,7 +112,7 @@ func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.Request
 		pdf.SetLineWidth(0.2)
 
 		pdf.CellFormat(20, 10, fmt.Sprintf("%d", i+1), "1", 0, "C", true, 0, "")
-		pdf.CellFormat(170, 10, team, "1", 1, "L", true, 0, "")
+		pdf.CellFormat(170, 10, team.Name, "1", 1, "L", true, 0, "")
 	}
 
 	var buf bytes.Buffer
@@ -134,7 +124,7 @@ func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.Request
 	fileName := fmt.Sprintf("%s_teams.pdf", strings.ToLower(strings.Join(strings.Split(tournament.Name, " "), "_")))
 
 	e.Response.Header().Set("Content-Type", "application/pdf")
-	e.Response.Header().Set("Content-Disposition", "attachment; filename="+fileName)
+	e.Response.Header().Set("Content-Disposition", "inline; filename="+fileName)
 	e.Response.Header().Set("Content-Length", fmt.Sprintf("%d", buf.Len()))
 
 	_, err = e.Response.Write(buf.Bytes())
