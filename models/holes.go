@@ -156,8 +156,8 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 				holes.*,
 				teams.id AS team_id,
 				players.id AS player_id,
-				players.handicap AS player_handicap,
 				players.name AS player_name,
+				players.handicap AS player_handicap,
 				tournaments.awarded_handicap as awarded_handicap 
 			FROM holes
 			JOIN players ON holes.player_id = players.id

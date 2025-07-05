@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -243,6 +242,7 @@ type LeaderboardRow struct {
 
 func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
+	individuals := e.Request.URL.Query().Get("individuals")
 
 	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
@@ -262,7 +262,35 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		(*holes)[index] = hole
 	}
 
-	holesByTeamAndPlayer := groupHolesByTeamAndPlayer(*holes)
+	var leaderboardRows []LeaderboardRow
+
+	if individuals == "false" {
+		leaderboardRows = getTeamLeaderboard(holes)
+	} else {
+		leaderboardRows = getIndividualLeaderboard(holes)
+	}
+
+	return e.JSON(http.StatusOK, leaderboardRows)
+}
+
+func groupHolesByPlayerByTeam(holes []models.HoleWithMetadata) map[string]map[int][]models.HoleWithMetadata {
+	result := make(map[string]map[int][]models.HoleWithMetadata)
+
+	for _, hole := range holes {
+		teamID := hole.TeamId
+		holeNumber := hole.Number
+
+		if _, ok := result[teamID]; !ok {
+			result[teamID] = make(map[int][]models.HoleWithMetadata)
+		}
+		result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
+	}
+
+	return result
+}
+
+func getTeamLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
+	holesByTeamAndPlayer := groupHolesByPlayerByTeam(*holes)
 	leaderboardRows := []LeaderboardRow{}
 
 	for teamId, teamHolesMap := range holesByTeamAndPlayer {
@@ -317,24 +345,56 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		leaderboardRows = append(leaderboardRows, leaderboardRow)
 	}
 
-	sort.Slice(leaderboardRows, func(i, j int) bool {
-		return leaderboardRows[j].Net > leaderboardRows[i].Net
-	})
-	return e.JSON(http.StatusOK, leaderboardRows)
+	return leaderboardRows
 }
 
-func groupHolesByTeamAndPlayer(holes []models.HoleWithMetadata) map[string]map[int][]models.HoleWithMetadata {
-	result := make(map[string]map[int][]models.HoleWithMetadata)
+func groupHolesByPlayer(holes []models.HoleWithMetadata) map[string][]models.HoleWithMetadata {
+	result := make(map[string][]models.HoleWithMetadata)
 
 	for _, hole := range holes {
-		teamID := hole.TeamId
-		holeNumber := hole.Number
+		playerName := hole.PlayerName
 
-		if _, ok := result[teamID]; !ok {
-			result[teamID] = make(map[int][]models.HoleWithMetadata)
+		if _, ok := result[playerName]; !ok {
+			result[playerName] = []models.HoleWithMetadata{}
 		}
-		result[teamID][holeNumber] = append(result[teamID][holeNumber], hole)
+		result[playerName] = append(result[playerName], hole)
 	}
 
 	return result
+}
+
+func getIndividualLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
+	holesByPlayer := groupHolesByPlayer(*holes)
+	leaderboardRows := []LeaderboardRow{}
+
+	for playerName, holes := range holesByPlayer {
+		leaderboardRow := LeaderboardRow{}
+
+		if len(holes) == 0 {
+			break
+		}
+
+		var thruHole int
+		for _, hole := range holes {
+			if len(hole.Score) > 0 && hole.Score != "X" {
+				thruHole++
+				holeScore, _ := strconv.Atoi(hole.Score)
+
+				grossScore := holeScore
+
+				netScore := holeScore
+				if hole.StrokeHole > 0 {
+					netScore = holeScore - hole.StrokeHole
+				}
+
+				leaderboardRow.TeamName = playerName
+				leaderboardRow.Thru = thruHole
+				leaderboardRow.Gross += grossScore - hole.Par
+				leaderboardRow.Net += netScore - hole.Par
+			}
+		}
+		leaderboardRows = append(leaderboardRows, leaderboardRow)
+	}
+
+	return leaderboardRows
 }
