@@ -21,7 +21,6 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
-    "@gapu/formix": "^2.0.2",
     "@kobalte/core": "^0.13.10",
     "@solidjs/router": "^0.15.1",
     "@tanstack/solid-query": "^5.81.2",

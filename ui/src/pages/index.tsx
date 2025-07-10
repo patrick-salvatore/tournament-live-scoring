@@ -1,99 +1,77 @@
-import { createForm, useField, Form as _Form } from "@gapu/formix";
 import { useNavigate } from "@solidjs/router";
-import { useMutation } from "@tanstack/solid-query";
-import { ErrorBoundary } from "solid-js";
+import { createMemo } from "solid-js";
 import { z } from "zod";
 
 import { assignTeam } from "~/api/teams";
 
 import { LoadingButton } from "~/components/loading_button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
-import { FieldError, FormError } from "~/components/ui/form";
+import { Form, FormError } from "~/components/form";
+import { createForm } from "~/components/form/create_form";
 import { TextField, TextFieldRoot } from "~/components/ui/textfield";
-import authStore, { type TeamAssignment } from "~/lib/auth";
-
-const TeamUuidField = () => {
-  const field = useField<string>("teamId");
-
-  return (
-    <TextFieldRoot class="space-y-1">
-      <TextField
-        value={field.value() as string}
-        placeholder="Team Code"
-        onInput={(e) => field.setValue(e.currentTarget.value)}
-        onFocus={() => {
-          field.setMeta((prev) => ({ ...prev, touched: true }));
-        }}
-        disabled={field.meta().disabled}
-        required
-      />
-      <FieldError name={"teamId"} />
-    </TextFieldRoot>
-  );
-};
+import authStore from "~/lib/auth";
+import { cn } from "~/lib/cn";
 
 const TeamForm = () => {
   const navigate = useNavigate();
 
-  const form = createForm({
+  const { form, register, handleSubmit } = createForm({
     schema: z.object({
-      teamId: z.string(),
+      teamId: z.string({}).min(1),
     }),
-    initialState: {
-      teamId: "",
-      error: null,
-    },
-    onSubmit: async (state) => {
-      Object.keys(state).forEach((key) => {
-        form.setFieldMeta(key, (prev) => ({
-          ...prev,
-          error: null,
-        }));
-      });
-      mutation.mutate({ teamId: state.teamId });
-    },
   });
 
-  const mutation = useMutation<TeamAssignment, any, { teamId: string }>(() => ({
-    mutationFn: ({ teamId }) => assignTeam(teamId.toLowerCase()),
-    onError: (error: any) => {
-      form.setState("error", () => error.response.data.message);
-    },
-    onSuccess: (data) => {
-      authStore.save(data.token);
+  const onSubmit = handleSubmit(async (data) => {
+    const res = await assignTeam(data.teamId.toLowerCase());
 
-      navigate(`/tournament/start`, { replace: true });
-    },
-  }));
+    authStore.save(res.token);
+    navigate(`/tournament/start`, { replace: true });
+  });
+
+  const teamIdFieldError = createMemo(() => {
+    return form.fields?.teamId?.error;
+  });
 
   return (
     <Card class="pt-4">
-      <_Form context={form}>
-        <CardContent class="p-4 space-y-2">
-          <TeamUuidField />
-        </CardContent>
-        <CardFooter>
-          <LoadingButton isLoading={() => mutation.isPending} type="submit">
-            Submit
-          </LoadingButton>
-        </CardFooter>
+      <Form form={form}>
+        <form onSubmit={onSubmit}>
+          <CardContent class="p-4 space-y-2">
+            <TextFieldRoot
+              class={cn(
+                "text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 h-[50px]"
+              )}
+            >
+              <TextField
+                class={cn(teamIdFieldError() && "border-red-500 ")}
+                {...register("teamId", { required: true })}
+                placeholder="Team Code"
+              />
+            </TextFieldRoot>
+          </CardContent>
+          <CardFooter>
+            <LoadingButton isLoading={() => form.submitting} type="submit">
+              Submit
+            </LoadingButton>
+          </CardFooter>
+        </form>
         <FormError />
-      </_Form>
+      </Form>
     </Card>
   );
 };
 
 export default function Home() {
   return (
-    <ErrorBoundary
-      fallback={(error, reset) => (
-        <div>
-          <p>Something went wrong: {error.message}</p>
-          <button onClick={reset}>Try Again</button>
-        </div>
-      )}
-    >
-      <TeamForm />
-    </ErrorBoundary>
+    // <ErrorBoundary
+    //   fallback={(error, reset) => (
+    //     <div>
+    //       <p>Something went wrong: {error.message}</p>
+    //       <button onClick={reset}>Try Again</button>
+    //     </div>
+    //   )}
+    // >
+    <TeamForm />
+    // </ErrorBoundary>
   );
 }

@@ -1,10 +1,36 @@
-import { useField, Form as FormProvider, useForm } from "@gapu/formix";
-
-import { type JSX, For, Show, type ParentProps } from "solid-js";
+import {
+  type JSX,
+  Show,
+  type ParentProps,
+  type ParentComponent,
+} from "solid-js";
 import { cn } from "~/lib/cn";
-import { TextFieldLabel } from "./textfield";
 
-const Form = FormProvider;
+import { createContext, useContext } from "solid-js";
+import { TextField } from "@kobalte/core/text-field";
+import { TextFieldRoot } from "../ui/textfield";
+
+export const FormContext = createContext();
+
+const Form: ParentComponent<{ form: any }> = (props) => (
+  <FormContext.Provider value={props.form}>
+    {props.children}
+  </FormContext.Provider>
+);
+
+export function useFormContext() {
+  const context = useContext(FormContext);
+  if (!context) {
+    throw new Error("can't find FormContext");
+  }
+  return context;
+}
+
+export function useField(path: string) {
+  const form = useFormContext() as any;
+
+  return form.fields[path];
+}
 
 type FormItemProps = ParentProps<JSX.HTMLAttributes<HTMLDivElement>>;
 
@@ -34,35 +60,13 @@ const FormItem = ({ class: _class, ...props }: FormItemProps) => {
 };
 FormItem.displayName = "FormItem";
 
-const FormLabel = ({
-  name,
-  class: _class,
-  ...props
-}: {
-  class: string;
-  name: string;
-}) => {
-  const { errors } = useField<string>(name);
-
-  return (
-    <div class="space-y-1">
-      <TextFieldLabel
-        class={cn(errors() && "text-destructive", _class)}
-        for={name}
-        {...props}
-      />
-    </div>
-  );
-};
-FormLabel.displayName = "FormLabel";
-
 type FormErrorProps = ParentProps<JSX.HTMLAttributes<HTMLParagraphElement>>;
 
 const FormError = ({ class: _class, ...props }: FormErrorProps) => {
-  const { state } = useForm();
+  const form = useFormContext() as any;
 
   const getMessage = () => {
-    const error = (state() as any).error;
+    const error = form.error;
 
     if (typeof error === "string") {
       return error;
@@ -74,7 +78,7 @@ const FormError = ({ class: _class, ...props }: FormErrorProps) => {
   };
 
   return (
-    <Show when={(state() as any).error}>
+    <Show when={form.error}>
       <p
         class={cn(
           "w-full flex gap-2 justify-center text-destructive bg-destructive/10 p-2 rounded-md text-center",
@@ -91,6 +95,22 @@ const FormError = ({ class: _class, ...props }: FormErrorProps) => {
 };
 FormError.displayName = "FormFieldError";
 
+export const FormField = (props: any) => {
+  const field = useField(props.name);
+  return (
+    <TextFieldRoot
+      class={cn(
+        "text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 h-[50px]",
+        field.error() && "border-red-500 focus-visible:ring-red-500"
+      )}
+    >
+      {props.children}
+      <FieldError name={props.name} />
+    </TextFieldRoot>
+  );
+};
+FormError.displayName = "FormField";
+
 type FieldErrorProps = ParentProps<JSX.HTMLAttributes<HTMLParagraphElement>> & {
   name: string;
 };
@@ -99,7 +119,7 @@ const FieldError = ({ name, class: _class, ...props }: FieldErrorProps) => {
   const field = useField(name);
 
   return (
-    <Show when={(field.meta() as any).error}>
+    <Show when={field.error}>
       <p
         class={cn(
           "gap-1 flex text-destructive bg-destructive/10 p-2 rounded-md text-center",
@@ -109,11 +129,11 @@ const FieldError = ({ name, class: _class, ...props }: FieldErrorProps) => {
         {...props}
       >
         <CircleAlertIcon width={16} height={16} />
-        <span>{(field.meta() as any).error}</span>
+        <span>{field.error?.message}</span>
       </p>
     </Show>
   );
 };
 FieldError.displayName = "FormFieldError";
 
-export { Form, FormItem, FormLabel, FormError, FieldError };
+export { Form, FormItem, FormError, FieldError };
