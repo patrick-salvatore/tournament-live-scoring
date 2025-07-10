@@ -20,18 +20,10 @@ function createSignal<T>(value?: T) {
   return { get, set };
 }
 
-function handleFieldEvent(
-  form,
-  field,
-  name,
-  event,
-  validationModes,
-  inputValue?
-): void {
+function handleFieldEvent(form, field, name, event, validationModes, _?): void {
   batch(() => {
     // Update value state
     field._value.set(event.target.value);
-
     // Update touched state
     field.touched.set(true);
     form._touched.set(true);
@@ -202,7 +194,7 @@ export function createForm(options = {} as any) {
     return form.fields[name]!;
   }
 
-  function register(name, props?) {
+  function register(name, _?) {
     const getField = createMemo(() => {
       return initializeFieldStore(name);
     });

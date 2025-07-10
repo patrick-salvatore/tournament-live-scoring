@@ -3,8 +3,9 @@ import { batch, untrack } from "solid-js";
 export function validateIfRequired(
   form,
   fieldOrFieldArray,
-  name,
-  { on: modes, shouldFocus = false }
+  _,
+  // { on: modes, _shouldFocus = false }
+  { on: modes }
 ): void {
   untrack(() => {
     const validateOn = fieldOrFieldArray.validateOn ?? form.validateOn;
