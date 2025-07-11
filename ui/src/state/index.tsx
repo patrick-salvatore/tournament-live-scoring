@@ -18,7 +18,7 @@ import { useSessionStore } from "./session";
 import { useCourseStore } from "./course";
 import { identity } from "./helpers";
 
-const ROUTES = ["start", "leaderboard", "scorecard"];
+const ROUTES = ["start", "leaderboard", "scorecard", "wagers"];
 
 const AppStoreSetter: ParentComponent = (props) => {
   const location = useLocation();
@@ -42,7 +42,7 @@ const AppStoreSetter: ParentComponent = (props) => {
           getTeamPlayersById(session()!.teamId),
           getCourseDataByTournamentId(session()!.tournamentId),
         ]);
-        
+
         batch(() => {
           setTournamentStore(tournament);
           setTeamStore(team, teamPlayers);

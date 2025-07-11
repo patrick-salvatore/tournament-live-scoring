@@ -368,7 +368,9 @@ func getIndividualLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow
 	leaderboardRows := []LeaderboardRow{}
 
 	for playerName, holes := range holesByPlayer {
-		leaderboardRow := LeaderboardRow{}
+		leaderboardRow := LeaderboardRow{
+			TeamName: playerName,
+		}
 
 		if len(holes) == 0 {
 			break
@@ -387,7 +389,6 @@ func getIndividualLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow
 					netScore = holeScore - hole.StrokeHole
 				}
 
-				leaderboardRow.TeamName = playerName
 				leaderboardRow.Thru = thruHole
 				leaderboardRow.Gross += grossScore - hole.Par
 				leaderboardRow.Net += netScore - hole.Par

@@ -1,7 +1,6 @@
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -18,21 +17,30 @@ import TournamentView from "~/components/tournament_view";
 import { Route } from "@solidjs/router";
 import { useTournamentStore } from "~/state/tournament";
 
-const Leaderboard = () => {
+const WagerLeaderboard = () => {
   const session = useSessionStore(identity);
 
-  const holesQuery = useQuery(() => ({
-    queryKey: ["leaderboard"],
-    queryFn: () => getLeaderboard(session()?.tournamentId!),
+  const holesQuery = useQuery<Leaderboard>(() => ({
+    queryKey: ["wager", "leaderboard"],
+    queryFn: () => getLeaderboard(session()?.tournamentId!, true),
     initialData: [],
   }));
 
   const leaderBoard = createMemo(() => {
     const groupByScore = groupByIdMap(holesQuery.data, "netScore");
 
-    return Object.entries(groupByScore).sort((a, b) => {
-      return +a[0] > +b[0] ? 1 : -1;
-    });
+    const sortedRows = Object.entries(groupByScore)
+      .sort((a, b) => {
+        return +a[0] > +b[0] ? 1 : -1;
+      })
+      .map((row) => {
+        const sortedByName = row[1]
+          .sort((a, b) => (a.teamName > b.teamName ? -1 : 1))
+          .sort((a, b) => (a.thru > b.thru ? -1 : 1));
+        return [row[0], sortedByName];
+      });
+
+    return sortedRows as any[];
   });
 
   return (
@@ -40,7 +48,8 @@ const Leaderboard = () => {
       <TableHeader>
         <TableRow>
           <TableHead>Pos.</TableHead>
-          <TableHead>Team</TableHead>
+          <TableHead>Name</TableHead>
+          <TableHead class="text-right">Gross</TableHead>
           <TableHead class="text-right">Net</TableHead>
           <TableHead class="text-center">Thru</TableHead>
         </TableRow>
@@ -53,6 +62,7 @@ const Leaderboard = () => {
                 const isTied = teams.length > 1;
                 const pos = position() + 1;
                 const netScore = row.netScore;
+                const grossScore = row.grossScore;
 
                 return (
                   <TableRow>
@@ -62,6 +72,13 @@ const Leaderboard = () => {
 
                     <TableCell class="font-medium">{row.teamName}</TableCell>
 
+                    <TableCell class="text-right">
+                      {grossScore === 0
+                        ? "E"
+                        : grossScore < 0
+                        ? grossScore
+                        : `+${grossScore}`}
+                    </TableCell>
                     <TableCell class="text-right">
                       {netScore === 0
                         ? "E"
@@ -88,12 +105,12 @@ export default () => {
 
   return (
     <Route
-      path="leaderboard"
+      path="/wagers"
       component={() => (
         <Show when={tournament().id}>
           <TournamentView>
             <Suspense>
-              <Leaderboard />
+              <WagerLeaderboard />
             </Suspense>
           </TournamentView>
         </Show>

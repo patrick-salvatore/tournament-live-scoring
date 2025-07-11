@@ -15,8 +15,9 @@ import AppShell from "~/components/shell";
 
 import TeamIdentity from "./pages";
 import StartRoute from "./pages/start_tournament";
-import LeaderBoard from "./pages/leaderboard";
+import LeaderboardRoute from "./pages/leaderboard";
 import ScoreCardRoute from "./pages/scorecard";
+import WagersRoute from "./pages/wagers";
 
 const root = document.getElementById("root");
 
@@ -39,10 +40,10 @@ render(
             preload={() => createAsync(async () => authCheck())}
             component={AppStoreSetter}
           >
-            <ScoreCardRoute />
             <StartRoute />
-            <LeaderBoard />
-
+            <ScoreCardRoute />
+            <LeaderboardRoute />
+            <WagersRoute />
             <Route path="*" component={TeamIdentity} />
           </Route>
           <Route

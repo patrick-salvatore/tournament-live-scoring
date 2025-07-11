@@ -295,7 +295,7 @@ const ScoreCard = () => {
   };
 
   return (
-    <TournamentView>
+    <>
       <div class=" bg-white rounded-lg shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
           <button
@@ -490,7 +490,7 @@ const ScoreCard = () => {
           </div>
         </div>
       </Show>
-    </TournamentView>
+    </>
   );
 };
 
@@ -502,7 +502,9 @@ export default () => {
       path="/scorecard"
       component={() => (
         <Show when={team().id}>
-          <ScoreCard />
+          <TournamentView>
+            <ScoreCard />
+          </TournamentView>
         </Show>
       )}
     />

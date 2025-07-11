@@ -14,14 +14,12 @@ const TournamentView: ParentComponent = (props) => {
   const currentTab = createMemo(() => {
     if (location.pathname.endsWith("scorecard")) return "scorecard";
     if (location.pathname.endsWith("leaderboard")) return "leaderboard";
+    if (location.pathname.endsWith("wagers")) return "wagers";
   });
 
   const handleTabChange = (value: string) => {
-    if (value === "scorecard") {
-      navigate(`/tournament/scorecard`);
-    } else {
-      navigate(`/tournament/leaderboard`);
-    }
+    console.log(value)
+    navigate(`/tournament/${value}`);
   };
 
   return (
@@ -34,11 +32,15 @@ const TournamentView: ParentComponent = (props) => {
           <TabsTrigger class="z-5" value="leaderboard">
             Leaderboard
           </TabsTrigger>
+          <TabsTrigger class="z-5" value="wagers">
+            Wagers
+          </TabsTrigger>
         </TabsList>
 
         <Suspense>
           <TabsContent value="leaderboard">{props.children}</TabsContent>
           <TabsContent value="scorecard">{props.children}</TabsContent>
+          <TabsContent value="wagers">{props.children}</TabsContent>
         </Suspense>
       </Tabs>
     </Show>
