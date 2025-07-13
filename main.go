@@ -44,6 +44,7 @@ func main() {
 		protectedRouter.PUT("v1/team/{teamId}", teamsCtr.HandleUpdateTeam)
 		protectedRouter.GET("v1/team/{teamId}/holes", teamsCtr.HandleGetTeamHoles)
 		protectedRouter.GET("v1/team/{teamId}/players", teamsCtr.HandleGetPlayersByTeamId)
+		router.GET("v1/tournaments/{tournamentId}/teams", teamsCtr.HandleGetTeamsByTournamentId)
 
 		// /tournament
 		tournamentCtr := controllers.NewTournamentController(app)

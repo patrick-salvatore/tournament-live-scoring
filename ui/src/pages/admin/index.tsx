@@ -7,10 +7,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui/tabs";
-import CreateTournamentForm from "./create-tournament-form";
-import UpdateTournaments from "./update-tournaments";
+import CreateTournamentForm from "./create_tournament_form";
+import UpdateTournaments from "./update_tournaments";
+import ViewTournamentsTeams from "./view_tournament_teams";
 
-const TournamentPanel = () => {
+const TournamentsPanel = () => {
   const [tab, setTab] = createSignal<string>();
 
   const handleTabChange = setTab;
@@ -39,6 +40,29 @@ const TournamentPanel = () => {
   );
 };
 
+const TeamsPanel = () => {
+  const [tab, setTab] = createSignal<string>();
+
+  const handleTabChange = setTab;
+
+  return (
+    <Tabs value={tab() || "create"} onChange={handleTabChange}>
+      <TabsList>
+        <TabsTrigger class="z-5" value="view">
+          View
+        </TabsTrigger>
+        <TabsIndicator variant="underline" />
+      </TabsList>
+
+      <Suspense>
+        <TabsContent value="view">
+          <ViewTournamentsTeams />
+        </TabsContent>
+      </Suspense>
+    </Tabs>
+  );
+};
+
 const AdminPanel = () => {
   return (
     <Tabs>
@@ -54,9 +78,11 @@ const AdminPanel = () => {
 
       <Suspense>
         <TabsContent value="tournament">
-          <TournamentPanel />
+          <TournamentsPanel />
         </TabsContent>
-        <TabsContent value="teams">teams</TabsContent>
+        <TabsContent value="teams">
+          <TeamsPanel />
+        </TabsContent>
       </Suspense>
     </Tabs>
   );

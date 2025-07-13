@@ -18,7 +18,7 @@ const UserAuthForm: ParentComponent<{ onLogin: () => void }> = (props) => {
     }),
   });
 
-  async function onSubmit(data) {
+  async function onSubmit() {
     try {
       // await pb
       //   .collection("_superusers")

@@ -29,6 +29,17 @@ func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, team)
 }
 
+func (tc *TeamsController) HandleGetTeamsByTournamentId(e *core.RequestEvent) error {
+	teamId := e.Request.PathValue("tournamentId")
+	team, err := models.GetTeamsByTournamentId(tc.db, teamId)
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, team)
+}
+
 func (tc *TeamsController) HandleGetTeams(e *core.RequestEvent) error {
 	teams, err := models.GetTeams(tc.db)
 
