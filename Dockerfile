@@ -7,6 +7,9 @@ WORKDIR /ui
 
 RUN npm ci
 
+ARG HOST
+ENV VITE_HOST=$HOST
+
 RUN npm run build
 
 # --- Stage 2: Build Go App ---

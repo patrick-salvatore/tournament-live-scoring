@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"maps"
 	"sort"
 	"strconv"
 
@@ -13,29 +14,85 @@ type CourseHoleData struct {
 	Par      int `json:"par"`
 	Handicap int `json:"handicap"`
 }
-
-type CourseDataHole struct {
-	Par      string `json:"par"`
-	Handicap string `json:"handicap"`
+type Course struct {
+	Id         string `db:"id" json:"id,omitempty"`
+	Name       string `db:"name" json:"name,omitempty"`
+	Tees       string `db:"tees" json:"tees,omitempty"`
+	HoleLayout string `db:"hole_layout" json:"holes,omitempty"`
 }
 
-type Course struct {
-	Id         string  `db:"id" json:"id"`
-	Name       string  `db:"name" json:"name"`
-	Slope      float64 `db:"slope" json:"slope"`
-	CourseRate float64 `db:"course_rate" json:"courseRate"`
-	Par        int     `db:"par" json:"par"`
-	HoleLayout string  `db:"hole_layout" json:"holes"`
+type CourseTee struct {
+	Gender        string  `json:"gender"`
+	Par           int     `json:"par"`
+	CourseRating  float64 `json:"course_rating"`
+	BogeyRating   float64 `json:"bogey_rating"`
+	SlopeRating   int     `json:"slope_rating"`
+	RatingF9      float64 `json:"rating_f9"`
+	RatingB9      float64 `json:"rating_b9"`
+	Front9        string  `json:"front_9"`
+	Back9         string  `json:"back_9"`
+	BogeyRatingF9 float64 `json:"bogey_rating_f9"`
+	BogeyRatingB9 float64 `json:"bogey_rating_b9"`
+	SlopeF9       int     `json:"slope_f9"`
+	SlopeB9       int     `json:"slope_b9"`
+	TeeID         int     `json:"tee_id"`
+	Length        int     `json:"length"`
+}
+
+type CourseId struct {
+	Name string `db:"name" json:"name"`
+	Id   string `db:"id" json:"id"`
 }
 
 type CourseHoleDataMap map[int]CourseHoleData
+type CourseTeeDataMap map[string]CourseTee
 
-type CourseWithHoles struct {
-	Course
+type CourseData struct {
 	Holes []CourseHoleData `json:"holes"`
+	Tees  CourseTeeDataMap `json:"tees"`
 }
 
-func GetCourseByTournamentId(db dbx.Builder, tournamentId string) (*CourseWithHoles, error) {
+type CourseWithData struct {
+	Course
+	Meta CourseData `json:"meta"`
+}
+
+func GetCourses(db dbx.Builder) (*[]CourseWithData, error) {
+	var results []Course
+
+	err := db.
+		NewQuery(`
+			SELECT courses.* FROM courses
+		`).
+		All(&results)
+
+	if err != nil {
+		return nil, err
+	}
+
+	courses := []CourseWithData{}
+	for _, course := range results {
+		data, err := getCourseDataFromJson(&course)
+		if err != nil {
+			return nil, err
+		}
+
+		courses = append(courses, CourseWithData{
+			Course: Course{
+				Id:   course.Id,
+				Name: course.Name,
+			},
+			Meta: CourseData{
+				Holes: data.Holes,
+				Tees:  data.Tees,
+			},
+		})
+	}
+
+	return &courses, nil
+}
+
+func GetCourseByTournamentId(db dbx.Builder, tournamentId string) (*CourseWithData, error) {
 	var course Course
 
 	err := db.
@@ -54,38 +111,53 @@ func GetCourseByTournamentId(db dbx.Builder, tournamentId string) (*CourseWithHo
 		return nil, err
 	}
 
-	holes, err := getHolesFromCourseData(&course)
+	data, err := getCourseDataFromJson(&course)
 	if err != nil {
 		return nil, err
 	}
 
-	return &CourseWithHoles{
+	return &CourseWithData{
 		Course: course,
-		Holes:  holes,
+		Meta:   data,
 	}, nil
 }
 
-func getHolesFromCourseData(course *Course) ([]CourseHoleData, error) {
-	var courseLayout map[string]CourseHoleData
-	err := json.Unmarshal([]byte(course.HoleLayout), &courseLayout)
+func getCourseDataFromJson(course *Course) (CourseData, error) {
+	var courseHoles map[string]CourseHoleData
+	err := json.Unmarshal([]byte(course.HoleLayout), &courseHoles)
 	if err != nil {
-		return nil, err
+		return CourseData{}, err
 	}
 
 	var holes []CourseHoleData
-	for holeNumber, hole := range courseLayout {
+	for holeNumber, hole := range courseHoles {
 		number, err := strconv.Atoi(holeNumber)
 		if err != nil {
-			return nil, err
+			return CourseData{}, err
 		}
 
 		hole.Number = number + 1
 		holes = append(holes, hole)
 	}
+	sort.Slice(holes, func(i, j int) bool {
+		return holes[i].Number < holes[j].Number
+	})
+
+	var courseTees map[string]CourseTee
+	err = json.Unmarshal([]byte(course.Tees), &courseTees)
+	if err != nil {
+		return CourseData{}, err
+	}
+
+	var tees = make(CourseTeeDataMap)
+	maps.Copy(tees, courseTees)
 
 	sort.Slice(holes, func(i, j int) bool {
 		return holes[i].Number < holes[j].Number
 	})
 
-	return holes, nil
+	return CourseData{
+		Holes: holes,
+		Tees:  tees,
+	}, nil
 }

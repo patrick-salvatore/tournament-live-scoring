@@ -10,6 +10,7 @@ const inititalState = {
   name: "",
   uuid: "",
   awardedHandicap: 0,
+  isMatchPlay: false,
 };
 const [store, _setStore] = createStore<State>(inititalState);
 

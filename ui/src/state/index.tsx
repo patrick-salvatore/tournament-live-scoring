@@ -49,13 +49,15 @@ const AppStoreSetter: ParentComponent = (props) => {
           setCourseStore(course);
         });
 
+        if (!team.started) {
+          navigate(`/tournament/start`);
+        }
+
         const [, page] = location.pathname.split("/").filter(Boolean);
         if (!ROUTES.find((r) => r === page)) {
           navigate(`/tournament/scorecard`);
         } else if (team.started) {
           navigate(`/tournament/${page}`);
-        } else {
-          navigate(`/tournament/start`);
         }
       } catch {
         navigate(`/tournament/assign`);

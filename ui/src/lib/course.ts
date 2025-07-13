@@ -3,10 +3,20 @@ import type { Hole } from "./hole";
 export type Course = {
   id: string;
   name: string;
-  slope: number;
-  courseRate: number;
-  par: number;
+  tees: any[];
   holes: Hole[];
-  created: string;
-  updated: string;
 };
+
+export type CourseResponse = {
+  id: string;
+  meta: { holes?: Hole[]; tees: string[] };
+  name: string;
+};
+
+export function toCourse(res: CourseResponse): Course {
+  return {
+    ...res,
+    holes: res.meta.holes,
+    tees: res.meta.tees,
+  };
+}

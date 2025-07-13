@@ -38,6 +38,23 @@ func GetTeamById(db dbx.Builder, teamId string) (*Team, error) {
 	return &team, nil
 }
 
+func GetTeams(db dbx.Builder) (*[]Team, error) {
+	team := []Team{}
+	err := db.
+		NewQuery(`
+			SELECT 
+				teams.*
+			FROM teams
+		`).
+		All(&team)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &team, nil
+}
+
 func GetTeamsByTournamentId(db dbx.Builder, tournamentId string) (*[]Team, error) {
 	teams := []Team{}
 	err := db.
@@ -146,4 +163,61 @@ func CreateTeam(db dbx.Builder, tournamentId string, name string) (*Team, error)
 	}
 
 	return &team, nil
+}
+
+func CreateTeamPlayerLookup(db dbx.Builder, teamId string, playerId string, tee string) (bool, error) {
+	_, err := db.
+		NewQuery(`
+			INSERT INTO _team_players (team_id, player_id, tee, created, updated)
+			VALUES ({:team_id}, {:player_id}, {:tee}, {:created}, {:updated})
+			RETURNING *
+		`).
+		Bind(dbx.Params{
+			"team_id":   teamId,
+			"player_id": playerId,
+			"tee":       tee,
+			"created":   time.Now().Format(time.RFC3339),
+			"updated":   time.Now().Format(time.RFC3339),
+		}).
+		Execute()
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func DeleteTournamentTeams(db dbx.Builder, tournamentId string) (bool, error) {
+	_, err := db.
+		NewQuery(`
+			DELETE FROM _team_players 
+			WHERE team_id IN (
+				SELECT id FROM teams WHERE tournament_id = {:tournament_id}
+			)
+		`).
+		Bind(dbx.Params{
+			"tournament_id": tournamentId,
+		}).
+		Execute()
+
+	if err != nil {
+		return false, err
+	}
+
+	_, err = db.
+		NewQuery(`
+			DELETE FROM teams 
+				WHERE teams.tournament_id = {:tournament_id}
+		`).
+		Bind(dbx.Params{
+			"tournament_id": tournamentId,
+		}).
+		Execute()
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

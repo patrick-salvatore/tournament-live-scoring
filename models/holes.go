@@ -16,9 +16,8 @@ type Hole struct {
 	Number   int    `db:"number" json:"number"`
 	PlayerId string `db:"player_id" json:"playerId"`
 
-	PlayerHandicap            float64 `db:"player_handicap" json:"-"`
-	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"-"`
-	StrokeHole                int     `json:"strokeHole"`
+	PlayerHandicap float64 `db:"player_handicap" json:"-"`
+	StrokeHole     int     `json:"strokeHole"`
 }
 
 func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
@@ -62,14 +61,12 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 		NewQuery(`
 			SELECT 
 				holes.*,
-				players.handicap AS player_handicap,
-				tournaments.awarded_handicap as awarded_handicap
+				players.handicap AS player_handicap
 			FROM holes
 			JOIN players ON holes.player_id = players.id
-			JOIN teams ON teams.id = players.team_id 
-			JOIN tournaments ON tournaments.id = holes.tournament_id
-			WHERE holes.tournament_id = {:tournament_id} and teams.id = {:team_id}
-			ORDER BY  holes.number
+			JOIN _team_players ON _team_players.player_id = players.id 
+			WHERE _team_players.team_id = {:team_id}
+			ORDER BY holes.number
 		`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,
@@ -84,67 +81,18 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 	return &holes, nil
 }
 
-func GetHolesCountForTeam(db dbx.Builder, teamId string, tournamentId string) (*int, error) {
-	var count int
-
-	err := db.
-		NewQuery(`
-			SELECT 
-				count(*)
-			FROM holes
-			JOIN players ON holes.player_id = players.id
-			JOIN teams ON teams.id = players.team_id 
-			WHERE teams.id = {:team_id}
-		`).
-		Bind(dbx.Params{
-			"team_id": teamId,
-		}).
-		One(&count)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &count, nil
-}
-
-func GetHolesForTournamentId(db dbx.Builder, tournamentId string) (*[]Hole, error) {
-	var holes []Hole
-
-	err := db.
-		NewQuery(`
-			SELECT 
-				holes.*,
-			FROM holes
-			JOIN players ON holes.player_id = players.id
-			JOIN teams ON players.team_id = teams.id
-			WHERE holes.tournament_id = {:tournament_id}
-			ORDER BY holes.player_id, holes.number
-		`).
-		Bind(dbx.Params{
-			"tournament_id": tournamentId,
-		}).
-		All(&holes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &holes, nil
-}
-
 type HoleWithMetadata struct {
-	Id                        string  `db:"id"`
-	Score                     string  `db:"score"`
-	Par                       int     `db:"par"`
-	Handicap                  int     `db:"handicap"`
-	Number                    int     `db:"number"`
-	PlayerId                  string  `db:"player_id"`
-	PlayerName                string  `db:"player_name"`
-	TeamId                    string  `db:"team_id"`
-	PlayerHandicap            float64 `db:"player_handicap"`
-	AwardedTournamentHandicap float64 `db:"awarded_handicap"`
-	StrokeHole                int
+	Id                        string  `db:"id" json:"id"`
+	Score                     string  `db:"score" json:"score"`
+	Par                       int     `db:"par" json:"par"`
+	Handicap                  int     `db:"handicap" json:"handicap"`
+	Number                    int     `db:"number" json:"number"`
+	PlayerId                  string  `db:"player_id" json:"playerId"`
+	PlayerName                string  `db:"player_name" json:"playerName"`
+	TeamId                    string  `db:"team_id" json:"teamId"`
+	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedTournamentHandicap"`
+	StrokeHole                int     `json:"strokeHole"`
 }
 
 func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
@@ -154,14 +102,14 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 		NewQuery(`
 			SELECT 
 				holes.*,
-				teams.id AS team_id,
-				players.id AS player_id,
+				_team_players.team_id AS team_id,
 				players.name AS player_name,
 				players.handicap AS player_handicap,
-				tournaments.awarded_handicap as awarded_handicap 
+				players.id AS player_id,
+				tournaments.awarded_handicap as awarded_handicap
 			FROM holes
-			JOIN players ON holes.player_id = players.id
-			JOIN teams ON players.team_id = teams.id
+			JOIN players ON players.id = holes.player_id
+			JOIN _team_players ON _team_players.player_id = players.id
 			JOIN tournaments ON holes.tournament_id = {:tournament_id}
 			WHERE holes.tournament_id = {:tournament_id}
 			GROUP BY holes.player_id, holes.number
@@ -278,4 +226,22 @@ func UpdateHoleForPlayer(db dbx.Builder, holeId string, updates HoleUpdate) (*Ho
 	}
 
 	return &updates, nil
+}
+
+func DeleteHolesForTeam(db dbx.Builder, tournamentId string) (bool, error) {
+	_, err := db.
+		NewQuery(`
+			DELETE FROM holes 
+			WHERE tournament_id = {:tournament_id}
+		`).
+		Bind(dbx.Params{
+			"tournament_id": tournamentId,
+		}).
+		Execute()
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

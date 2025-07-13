@@ -28,10 +28,6 @@ const TeamForm = () => {
     navigate(`/tournament/start`, { replace: true });
   });
 
-  const teamIdFieldError = createMemo(() => {
-    return form.fields?.teamId?.error;
-  });
-
   return (
     <Card class="pt-4">
       <Form form={form}>
@@ -43,8 +39,8 @@ const TeamForm = () => {
               )}
             >
               <TextField
-                class={cn(teamIdFieldError() && "border-red-500 ")}
-                {...register("teamId", { required: true })}
+                class={cn(form.fieldErrors.teamId && "border-red-500 ")}
+                {...register("teamId")}
                 placeholder="Team Code"
               />
             </TextFieldRoot>
@@ -61,17 +57,4 @@ const TeamForm = () => {
   );
 };
 
-export default function Home() {
-  return (
-    // <ErrorBoundary
-    //   fallback={(error, reset) => (
-    //     <div>
-    //       <p>Something went wrong: {error.message}</p>
-    //       <button onClick={reset}>Try Again</button>
-    //     </div>
-    //   )}
-    // >
-    <TeamForm />
-    // </ErrorBoundary>
-  );
-}
+export default TeamForm;

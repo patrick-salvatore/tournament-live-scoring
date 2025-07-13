@@ -5,6 +5,7 @@ export type Player = {
   name: string;
   handicap: number;
   teamId: string;
+  tee: string;
 };
 
 export type TeamProps = {

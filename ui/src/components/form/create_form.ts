@@ -1,5 +1,3 @@
-//@ts-ignore
-
 import {
   createSignal as createSolidSignal,
   createMemo,
@@ -12,26 +10,39 @@ import {
   updateFieldDirty,
   getElementInput,
   get,
+  getValues,
 } from "./utils";
 import { resolver } from "./schema_resolver";
+import { transform } from "zod/v4";
 
 function createSignal<T>(value?: T) {
   const [get, set] = createSolidSignal(value);
   return { get, set };
 }
 
-function handleFieldEvent(form, field, name, event, validationModes, _?): void {
+function handleFieldEvent(
+  form,
+  field,
+  name,
+  event,
+  validationModes,
+  options = {} as any
+): void {
   batch(() => {
-    // Update value state
-    field._value.set(event.target.value);
-    // Update touched state
+    if (event?.target?.value) {
+      let value = event.target.value;
+
+      if (options.transform) {
+        value = transform(value);
+      }
+
+      field._value.set(value);
+    }
     field.touched.set(true);
     form._touched.set(true);
 
-    // Update dirty state
     updateFieldDirty(form, field);
 
-    // Validate value if required
     validateIfRequired(form, field, name, { on: validationModes });
   });
 }
@@ -84,10 +95,20 @@ function createFormStore({
     _fields: fields,
     // setFields,
 
-    fieldArrays: {},
+    _fieldArrays: {},
 
     // Other
-    validators: new Set(),
+    _validators: new Set(),
+
+    get fieldErrors() {
+      return Object.entries(fields.get()).reduce(
+        (acc, [key, field]: any) => ({ ...acc, [key]: field.error }),
+        {}
+      ) as any;
+    },
+    get values() {
+      return getValues({ fields: fields.get() });
+    },
     get element() {
       return element.get();
     },
@@ -124,25 +145,14 @@ function createFormStore({
   };
 }
 
-function getValues(form) {
-  return untrack(() =>
-    Object.entries(form.fields).reduce(
-      (fields, [key, field]: any) => ({ ...fields, [key]: field.value }),
-      {}
-    )
-  );
-}
-
 export function createForm(options = {} as any) {
-  // Create form store
   const form = createFormStore(options);
 
-  function initializeFieldStore(name) {
+  function initializeFieldStore(name, options) {
     // Initialize store on first request
     const field = untrack(() => form.fields[name]);
 
     if (!field) {
-      // Get initial value of field
       const initial = get(form.initialValues, name);
 
       // Create signals of field store
@@ -173,12 +183,12 @@ export function createForm(options = {} as any) {
 
           // Other
           validate: [],
-          validateOn: undefined,
-          revalidateOn: undefined,
+          validateOn: options?.validateOn || undefined,
+          revalidateOn: options?.revalidateOn || "blur",
           consumers: new Set(),
 
           get value() {
-            return value.get();
+            return value.get() ?? initialValue.get();
           },
           get error() {
             return error.get();
@@ -194,23 +204,19 @@ export function createForm(options = {} as any) {
     return form.fields[name]!;
   }
 
-  function register(name, _?) {
+  function register(name, options = {} as any) {
     const getField = createMemo(() => {
-      return initializeFieldStore(name);
+      return initializeFieldStore(name, options);
     });
 
-    return {
+    const out: any = {
+      name,
       ref(element) {
-        console.log(element.type);
-        // Add element to elements
         const type = element.type;
 
         getField().elements.set((elements) => [...elements, element]);
         getField().type.set(element.type);
 
-        // Create effect that replaces initial input and input of field with
-        // initial input of element if both is "undefined", so that dirty
-        // state also resets to "false" when user removes input
         createEffect(() => {
           if (
             element.type !== "radio" &&
@@ -223,35 +229,38 @@ export function createForm(options = {} as any) {
         });
       },
       onInput(event) {
-        handleFieldEvent(
-          form,
-          getField(),
-          name,
-          event,
-          ["touched", "input"],
-          getElementInput(
-            event.currentTarget,
-            getField(),
-            getField().type.get()
-          )
-        );
+        handleFieldEvent(form, getField(), name, event, ["touched", "input"], {
+          transform: options.transform,
+        });
       },
       onChange(event) {
-        handleFieldEvent(form, getField(), name, event, ["change"]);
+        if (options && options.onChange) {
+          options.onChange(event);
+        }
+
+        handleFieldEvent(form, getField(), name, event, ["change"], {
+          transform: options.transform,
+        });
       },
       onBlur(event) {
         handleFieldEvent(form, getField(), name, event, ["touched", "blur"]);
       },
     };
+
+    if (form.fields[name].value && !Array.isArray(form.fields[name].value)) {
+      out.value = form.fields[name].value;
+    }
+
+    return out;
   }
 
   const handleSubmit = (onSubmit) => async (event) => {
     event.preventDefault();
 
     batch(() => {
-      form._submitCount.set((count) => (count ? count + 1 : 1));
       form._submitted.set(true);
       form._submitting.set(true);
+      form._submitCount.set((count) => (count ? count + 1 : 1));
     });
     const values = getValues(form);
     const schema = form.schema;
@@ -267,7 +276,7 @@ export function createForm(options = {} as any) {
     } catch (error: any) {
       batch(() => {
         Object.entries(error.errors).forEach(([key, e]) => {
-          form.fields[key]._error.set(e);
+          form.fields[key] && form.fields[key]._error.set(e);
         });
       });
     } finally {

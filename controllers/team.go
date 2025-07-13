@@ -29,6 +29,16 @@ func (tc *TeamsController) HandleGetTeamById(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, team)
 }
 
+func (tc *TeamsController) HandleGetTeams(e *core.RequestEvent) error {
+	teams, err := models.GetTeams(tc.db)
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, teams)
+}
+
 func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 	teamId := e.Request.PathValue("teamId")
 
@@ -37,11 +47,25 @@ func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
+	tournament, err := models.GetTournamentById(tc.db, team.TournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	players, err := models.GetPlayersFromTeamId(tc.db, team.Id)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	var playerMap = make(map[string]models.Player)
+	for _, player := range *players {
+		playerMap[player.Id] = player
+	}
+
 	course, err := models.GetCourseByTournamentId(tc.db, team.TournamentId)
 	if err != nil {
 		return err
 	}
-	courseHoleMap := getHoleDataMap(course)
 
 	holes, err := models.GetHolesForTeam(tc.db, teamId, team.TournamentId)
 	if err != nil {
@@ -50,9 +74,11 @@ func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 
 	holesWithStrokeHole := []models.Hole{}
 	for _, hole := range *holes {
-		holeIndex := (courseHoleMap)[hole.Number].Handicap
+		playerTee := playerMap[hole.PlayerId].Tee
+		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
+		courseTeeData := course.Meta.Tees[playerTee]
 
-		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, course.CourseRate, float64(course.Par), hole.AwardedTournamentHandicap, holeIndex)
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, float64(courseTeeData.SlopeRating), courseTeeData.CourseRating, float64(courseTeeData.Par), tournament.AwardedHandicap, holeIndex)
 
 		holesWithStrokeHole = append(holesWithStrokeHole, hole)
 	}

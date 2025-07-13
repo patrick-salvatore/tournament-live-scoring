@@ -1,6 +1,6 @@
 import zod from "zod";
 
-import { get, set } from "./utils";
+import { get, getValues, set } from "./utils";
 
 const setCustomValidity = (ref: any, fieldPath: any, errors: any) => {
   if (ref && "reportValidity" in ref) {
@@ -9,6 +9,34 @@ const setCustomValidity = (ref: any, fieldPath: any, errors: any) => {
     ref.reportValidity();
   }
 };
+
+let counter = 0;
+export function getUniqueId(): number {
+  return counter++;
+}
+
+export async function validate(form, name, _) {
+  const schema = form.schema;
+
+  if (!schema) return;
+
+  const validator = getUniqueId();
+  form._validators.add(validator);
+  form._validating.set(true);
+
+  try {
+    const values = getValues(form);
+    await resolver(schema.shape[name], values[name]);
+
+    form.fields[name]._error.set(undefined);
+
+    // return valid;
+  } catch (e) {
+    console.log(e);
+  } finally {
+    form._validating.set(false);
+  }
+}
 
 function parseIssues(zodErrors: zod.ZodIssue[]) {
   const errors = {} as any;
@@ -46,8 +74,6 @@ function parseIssues(zodErrors: zod.ZodIssue[]) {
 const nestErrors = (errors: any) => {
   const fieldErrors = {};
   for (const path in errors) {
-    // const field = get(options.fields, path);
-
     set(fieldErrors, path, errors[path]);
   }
   return fieldErrors;
@@ -55,13 +81,11 @@ const nestErrors = (errors: any) => {
 
 export async function resolver(schema: any, values: any) {
   try {
-    const data = await schema.parse(values);
+    await schema.parse(values);
 
-    return {
-      errors: {},
-      values: Object.assign({}, values),
-    };
+    return true;
   } catch (error: any) {
+    console.log(error)
     throw {
       values: {},
       errors: nestErrors(parseIssues(error.errors)),

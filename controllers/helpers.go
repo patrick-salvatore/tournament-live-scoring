@@ -35,9 +35,9 @@ func joinNames(names []string) string {
 	return strings.Join(names, ", ")
 }
 
-func getHoleDataMap(course *models.CourseWithHoles) models.CourseHoleDataMap {
+func getHoleDataMap(course *models.CourseWithData) models.CourseHoleDataMap {
 	courseHoleMap := make(models.CourseHoleDataMap)
-	for _, hole := range course.Holes {
+	for _, hole := range course.Meta.Holes {
 		courseHoleMap[hole.Number] = hole
 	}
 

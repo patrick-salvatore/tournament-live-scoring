@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -22,6 +24,16 @@ func NewTournamentController(app core.App) *TournamentController {
 	return &TournamentController{app: app, db: app.DB()}
 }
 
+func (tc *TournamentController) HandleGetTournaments(e *core.RequestEvent) error {
+	tournaments, err := models.GetTournaments(tc.app.DB())
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, tournaments)
+}
+
 func (tc *TournamentController) HandleGetTournamentById(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
 	tournament, err := models.GetTournamentById(tc.app.DB(), tournamentId)
@@ -31,6 +43,16 @@ func (tc *TournamentController) HandleGetTournamentById(e *core.RequestEvent) er
 	}
 
 	return e.JSON(http.StatusOK, tournament)
+}
+
+func (tc *TournamentController) HandleGetAllTournamentFormats(e *core.RequestEvent) error {
+	formats, err := models.GetAllTournamentFormats(tc.app.DB())
+
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusOK, formats)
 }
 
 func (tc *TournamentController) HandleStartTournamentForTeam(e *core.RequestEvent) error {
@@ -51,15 +73,15 @@ func (tc *TournamentController) HandleStartTournamentForTeam(e *core.RequestEven
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	err = tc.app.RunInTransaction(func(txApp core.App) error {
+	err = tc.app.RunInTransaction(func(txDb core.App) error {
 		for _, player := range *players {
-			_, err = models.CreateAllHolesForPlayer(txApp.DB(), player.Id, tournamentId, course.Holes)
+			_, err = models.CreateAllHolesForPlayer(txDb.DB(), player.Id, tournamentId, course.Meta.Holes)
 			if err != nil {
 				return err
 			}
 
 			started := true
-			_, err = models.UpdateTeam(txApp.DB(), teamId, models.TeamUpdate{Started: &started})
+			_, err = models.UpdateTeam(txDb.DB(), teamId, models.TeamUpdate{Started: &started})
 			if err != nil {
 				return err
 			}
@@ -134,41 +156,90 @@ func (tc *TournamentController) HandleGetTeamSheetFromTournament(e *core.Request
 	return e.JSON(http.StatusOK, "OK")
 }
 
-func (tc *TournamentController) HandleCreateTournamentTeams(e *core.RequestEvent) error {
+func (tc *TournamentController) HandleUpdateTournament(e *core.RequestEvent) error {
+	var data models.TournamentUpdate
 	tournamentId := e.Request.PathValue("tournamentId")
 
-	players, err := models.GetTournamentPlayers(tc.db, tournamentId)
+	err := json.NewDecoder(e.Request.Body).Decode(&data)
 	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+		return e.BadRequestError(err.Error(), nil)
 	}
 
-	tournament, err := models.GetTournamentById(tc.db, tournamentId)
-	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
-
-	teams, err := generateTeams(players, tournament)
-	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
-	}
 	err = tc.app.RunInTransaction(func(txDb core.App) error {
-		for i, team := range *teams {
+		_, err := models.UpdateTournament(txDb.DB(), tournamentId, data)
+		if err != nil {
+			return err
+		}
+
+		_, err = models.DeleteHolesForTeam(txDb.DB(), tournamentId)
+		if err != nil {
+			return err
+		}
+		_, err = models.DeleteTournamentTeams(txDb.DB(), tournamentId)
+		if err != nil {
+			return err
+		}
+
+		teams, err := generateTeams(tournamentId, *data.Players, *data.TeamCount)
+		if err != nil {
+			return err
+		}
+
+		for _, team := range *teams {
 			newTeam, err := models.CreateTeam(txDb.DB(), team.Team.TournamentId, team.Team.Name)
 			if err != nil {
 				return err
 			}
 
-			teamId := newTeam.Id
 			for _, player := range team.Players {
-				_, err = models.UpdatePlayer(txDb.DB(), player.Id, models.PlayerUpdate{
-					TeamId: &teamId,
-				})
+				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee)
 				if err != nil {
 					return err
 				}
 			}
+		}
 
-			(*teams)[i].Team.Id = newTeam.Id
+		return nil
+	})
+
+	if err != nil {
+		return e.InternalServerError(err.Error(), nil)
+	}
+
+	return e.JSON(http.StatusCreated, "ok")
+}
+
+func (tc *TournamentController) HandleCreateTournament(e *core.RequestEvent) error {
+	var data models.CreateTournamentData
+
+	err := json.NewDecoder(e.Request.Body).Decode(&data)
+	if err != nil {
+		return e.BadRequestError(err.Error(), nil)
+	}
+
+	err = tc.app.RunInTransaction(func(txDb core.App) error {
+		tournament, err := models.CreateTournament(txDb.DB(), data.CourseId, data.FormatId, data.Name, data.TeamCount, data.AwardedHandicap, data.IsMatchPlay)
+		if err != nil {
+			return err
+		}
+
+		teams, err := generateTeams(tournament.Id, data.Players, data.TeamCount)
+		if err != nil {
+			return err
+		}
+
+		for _, team := range *teams {
+			newTeam, err := models.CreateTeam(txDb.DB(), team.Team.TournamentId, team.Team.Name)
+			if err != nil {
+				return err
+			}
+
+			for _, player := range team.Players {
+				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil
@@ -177,24 +248,28 @@ func (tc *TournamentController) HandleCreateTournamentTeams(e *core.RequestEvent
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	return e.JSON(http.StatusOK, teams)
+	return e.JSON(http.StatusCreated, "ok")
 }
 
-func generateTeams(players *[]models.Player, tournament *models.Tournament) (*[]models.TeamWithPlayerCreate, error) {
-	teamSize := int(tournament.TeamCount)
-	if teamSize <= 0 {
+func generateTeams(tournamentId string, players []models.Player, teamCount int) (*[]models.TeamWithPlayerCreate, error) {
+	if teamCount <= 0 {
 		return nil, fmt.Errorf("invalid TeamCount, must be at least 1")
 	}
-	if len(*(players))%teamSize != 0 {
-		return nil, fmt.Errorf(fmt.Sprintf("player count (%d) must be divisible by team size (%d)", len(*(players)), teamSize))
+	if len(players)%teamCount != 0 {
+		return nil, fmt.Errorf(fmt.Sprintf("player count (%d) must be divisible by team size (%d)", len(players), teamCount))
 	}
 
-	teamCount := len(*(players)) / teamSize
-	teams := make([]models.TeamWithPlayerCreate, teamCount)
-	for i := range teamCount {
+	// ensure handicaps are sorts for team match making
+	sort.Slice(players, func(i, j int) bool {
+		return players[i].Handicap < players[j].Handicap
+	})
+
+	teamSize := len(players) / teamCount
+	teams := make([]models.TeamWithPlayerCreate, teamSize)
+	for i := range teamSize {
 		teams[i] = models.TeamWithPlayerCreate{
 			Team: models.TeamCreate{
-				TournamentId: tournament.Id,
+				TournamentId: tournamentId,
 			},
 			Players: []models.Player{},
 		}
@@ -203,7 +278,7 @@ func generateTeams(players *[]models.Player, tournament *models.Tournament) (*[]
 	forward := true
 	index := 0
 
-	for _, player := range *(players) {
+	for _, player := range players {
 		teams[index].Players = append(teams[index].Players, player)
 
 		if forward {
@@ -233,37 +308,54 @@ func generateTeams(players *[]models.Player, tournament *models.Tournament) (*[]
 }
 
 type LeaderboardRow struct {
-	TeamId   string `json:"teamId"`
-	TeamName string `json:"teamName"`
-	Gross    int    `json:"grossScore"`
-	Net      int    `json:"netScore"`
-	Thru     int    `json:"thru"`
+	TeamId         string `json:"teamId"`
+	TeamName       string `json:"teamName"`
+	Gross          int    `json:"grossScore,omitempty"`
+	Net            int    `json:"netScore,omitempty"`
+	MatchPlayScore string `json:"matchPlayScore,omitempty"`
+	Thru           int    `json:"thru"`
 }
 
 func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
 	individuals := e.Request.URL.Query().Get("individuals")
 
+	// tournament, err := models.GetTournamentById(tc.db, tournamentId)
+	// if err != nil {
+	// 	return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")
+	// }
+
 	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
-		return err
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")
 	}
-	courseHoleMap := getHoleDataMap(course)
+
+	players, err := models.GetPlayersByTournament(tc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetPlayersByTournament")
+	}
+
+	var playerMap = make(map[string]models.Player)
+	for _, player := range *players {
+		playerMap[player.Id] = player
+	}
 
 	holes, err := models.GetHolesForLeaderboard(tc.db, tournamentId)
 	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), nil)
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetHolesForLeaderboard")
 	}
 
 	for index, hole := range *holes {
-		holeIndex := (courseHoleMap)[hole.Number].Handicap
+		playerTee := playerMap[hole.PlayerId].Tee
+		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
+		courseTeeData := course.Meta.Tees[playerTee]
 
-		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, course.Slope, course.CourseRate, float64(course.Par), hole.AwardedTournamentHandicap, holeIndex)
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, float64(courseTeeData.SlopeRating), courseTeeData.CourseRating, float64(courseTeeData.Par), hole.AwardedTournamentHandicap, holeIndex)
+
 		(*holes)[index] = hole
 	}
 
 	var leaderboardRows []LeaderboardRow
-
 	if individuals == "false" {
 		leaderboardRows = getTeamLeaderboard(holes)
 	} else {

@@ -1,27 +1,32 @@
 import { batch, untrack } from "solid-js";
+import { validate } from "./schema_resolver";
+
+export function getValues(form) {
+  return untrack(() =>
+    Object.entries(form.fields).reduce(
+      (fields, [key, field]: any) => ({ ...fields, [key]: field.value }),
+      {}
+    )
+  );
+}
 
 export function validateIfRequired(
   form,
-  fieldOrFieldArray,
-  _,
-  // { on: modes, _shouldFocus = false }
-  { on: modes }
+  field,
+  name,
+  { on: modes, shouldFocus = false }
 ): void {
   untrack(() => {
-    const validateOn = fieldOrFieldArray.validateOn ?? form.validateOn;
-    const revalidateOn = fieldOrFieldArray.revalidateOn ?? form.revalidateOn;
+    const validateOn = field.validateOn ?? form.validateOn;
+    const revalidateOn = field.revalidateOn ?? form.revalidateOn;
     if (
       (modes as string[]).includes(
-        (
-          validateOn === "submit"
-            ? form._submitted.get()
-            : fieldOrFieldArray.error.get()
-        )
+        (validateOn === "submit" ? form.submitted : field.error)
           ? revalidateOn
           : validateOn
       )
     ) {
-      // validate(form, name, { shouldFocus });
+      validate(form, name, { shouldFocus });
     }
   });
 }

@@ -8,28 +8,28 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-type CourseController struct {
+type PlayersController struct {
 	app core.App
 	db  dbx.Builder
 }
 
-func NewCourseController(app core.App) *CourseController {
-	return &CourseController{app: app, db: app.DB()}
+func NewPlayersController(app core.App) *PlayersController {
+	return &PlayersController{app: app, db: app.DB()}
 }
 
-func (cc *CourseController) HandleGetCourses(e *core.RequestEvent) error {
-	courses, err := models.GetCourses(cc.db)
+func (pc *PlayersController) HandleGetPlayers(e *core.RequestEvent) error {
+	players, err := models.GetAllPlayers(pc.db)
 
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	return e.JSON(http.StatusOK, courses)
+	return e.JSON(http.StatusOK, players)
 }
 
-func (cc *CourseController) HandleGetCourseByTournamentId(e *core.RequestEvent) error {
+func (pc *PlayersController) HandleGetPlayersByTournament(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
-	players, err := models.GetCourseByTournamentId(cc.db, tournamentId)
+	players, err := models.GetPlayersByTournament(pc.db, tournamentId)
 
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)

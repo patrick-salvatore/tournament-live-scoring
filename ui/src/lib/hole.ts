@@ -10,6 +10,7 @@ export type Hole = {
   number: number;
   score: string;
   teamId?: string;
+  playerName: string;
 };
 
 export type HoleWithMetadata = {
