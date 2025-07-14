@@ -51,7 +51,7 @@ const GolfScoreButton: Component<{
       return (
         <>
           <div class="absolute rounded-full inset-1 border-1 border-gray-600 pointer-events-none" />
-          <div class="absolute rounded-full inset-2 border-1 border-gray-600 pointer-events-none" />
+          <div class="absolute rounded-full inset-1.5 border-1 border-gray-600 pointer-events-none" />
         </>
       );
     }
@@ -69,7 +69,7 @@ const GolfScoreButton: Component<{
       return (
         <>
           <div class="absolute inset-1 border-1 border-gray-600 pointer-events-none rounded-none" />
-          <div class="absolute inset-2 border-1 border-gray-500 pointer-events-none rounded-none" />
+          <div class="absolute inset-1.5 border-1 border-gray-500 pointer-events-none rounded-none" />
         </>
       );
     }

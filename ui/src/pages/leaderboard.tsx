@@ -8,7 +8,6 @@ import TournamentView from "~/components/tournament_view";
 import MatchPlayLeaderboard from "~/components/leaderboard/match_play_leaderboard";
 import StrokePlayLeaderboard from "~/components/leaderboard/stroke_play_leaderboard";
 
-
 export default () => {
   const tournament = useTournamentStore(identity);
 

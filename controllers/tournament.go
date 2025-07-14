@@ -320,11 +320,6 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 	tournamentId := e.Request.PathValue("tournamentId")
 	individuals := e.Request.URL.Query().Get("individuals")
 
-	// tournament, err := models.GetTournamentById(tc.db, tournamentId)
-	// if err != nil {
-	// 	return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")
-	// }
-
 	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")

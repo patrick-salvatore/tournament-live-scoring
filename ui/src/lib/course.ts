@@ -1,15 +1,15 @@
-import type { Hole } from "./hole";
+export type CourseHole = { number: number; par: number; handicap: number };
 
 export type Course = {
   id: string;
   name: string;
   tees: any[];
-  holes: Hole[];
+  holes: CourseHole[];
 };
 
 export type CourseResponse = {
   id: string;
-  meta: { holes?: Hole[]; tees: string[] };
+  meta: { holes?: CourseHole[]; tees: string[] };
   name: string;
 };
 

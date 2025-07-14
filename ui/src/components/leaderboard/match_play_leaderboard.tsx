@@ -1,12 +1,4 @@
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import {
   ArrowUp,
   ArrowDown,
   Minus,
@@ -14,30 +6,18 @@ import {
   Table as TableIcon,
 } from "lucide-solid";
 import { unwrap } from "solid-js/store";
-import {
-  createMemo,
-  createSignal,
-  For,
-  Match,
-  Show,
-  Suspense,
-  Switch,
-  type Component,
-} from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
-import { Route } from "@solidjs/router";
 
-import type { Leaderboard } from "~/lib/leaderboard";
-import { getHolesForLeaderboard, getLeaderboard } from "~/api/leaderboard";
+import { getHolesForLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
-import { groupByIdMap } from "~/lib/utils";
-import TournamentView from "~/components/tournament_view";
-import { useTournamentStore } from "~/state/tournament";
 import type { Hole } from "~/lib/hole";
-import { getTeamHoles } from "~/api/teams";
+
 import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
+import { useCourseStore } from "~/state/course";
+import { reduceToByIdMap } from "~/lib/utils";
 
 const Scorecard = (props) => {
   const holeNumbers = createMemo(() => {
@@ -88,7 +68,9 @@ const Scorecard = (props) => {
             {(holeNumber) => (
               <div class="flex flex-col gap-1 bg-white p-2 text-center font-medium text-sm min-w-[60px] border-b">
                 <span class="text-xs">{holeNumber}</span>
-                <span class="text-[10px]">{props.pars()[holeNumber]?.par}</span>
+                <span class="text-[10px]">
+                  {props.courseHoles()[holeNumber]?.par}
+                </span>
               </div>
             )}
           </For>
@@ -151,6 +133,7 @@ const Scorecard = (props) => {
 const MatchPlayLeaderboard = () => {
   const session = useSessionStore(identity);
   const [expandedRow, setExpandedRow] = createSignal({});
+  const course = useCourseStore(identity);
 
   const holesQuery = useQuery<Hole[]>(() => ({
     queryKey: ["leaderboard", "holes", "matchplay"],
@@ -158,6 +141,10 @@ const MatchPlayLeaderboard = () => {
     initialData: [],
     // refetchInterval: TEN_SECONDS,
   }));
+
+  const courseHoles = createMemo(() => {
+    return reduceToByIdMap(course().holes, "number");
+  });
 
   const holesPerTeam = createMemo(() => {
     const scoresPerHole = holesQuery.data.reduce((acc, hole) => {
@@ -170,23 +157,16 @@ const MatchPlayLeaderboard = () => {
       }
 
       if (!acc[hole.teamId][hole.number][hole.playerId]) {
-        acc[hole.teamId][hole.number][hole.playerId] = unwrap(hole);
+        acc[hole.teamId][hole.number][hole.playerId] = unwrap({
+          ...hole,
+          ...courseHoles()[hole.number],
+        });
       }
 
       return acc;
     }, {});
 
     return scoresPerHole;
-  });
-
-  const pars = createMemo(() => {
-    return holesQuery.data.reduce((acc, hole) => {
-      if (!acc[hole.number]) {
-        acc[hole.number] = hole;
-      }
-
-      return acc;
-    }, {});
   });
 
   const leaderboard = createMemo(() => {
@@ -204,7 +184,7 @@ const MatchPlayLeaderboard = () => {
         acc[hole.number] = [];
       }
 
-      acc[hole.number].push(hole);
+      acc[hole.number].push({ ...hole, ...courseHoles()[hole.number] });
 
       return acc;
     }, {});
@@ -214,6 +194,13 @@ const MatchPlayLeaderboard = () => {
     const _holes = Object.values(map);
 
     let winners = {};
+
+    const teamAName = [...(teams?.[teamAId] ?? [])]
+      .sort((a, b) => (a > b ? -1 : 1))
+      .join(", ");
+    const teamBName = [...(teams?.[teamBId] ?? [])]
+      .sort((a, b) => (a > b ? -1 : 1))
+      .join(", ");
 
     for (let i = 0; i < _holes.length; i++) {
       const holes = (_holes[i] as any)
@@ -245,12 +232,16 @@ const MatchPlayLeaderboard = () => {
       const teamAScore = +teamA.score - teamA.strokeHole;
       const teamBScore = +teamB.score - teamB.strokeHole;
 
+      let whoWon = 'tie'
       if (teamAScore < teamBScore) {
+        whoWon = "teamA won";
         holesWon++;
       }
       if (teamAScore > teamBScore) {
+        whoWon = "teamB won";
         holesWon--;
       }
+      // console.log(holesWon)
     }
 
     let teamAFinalScore;
@@ -291,16 +282,12 @@ const MatchPlayLeaderboard = () => {
       teamA: {
         id: teamAId,
         score: teamAFinalScore,
-        name: [...(teams?.[teamAId] ?? [])]
-          .sort((a, b) => (a > b ? -1 : 1))
-          .join(", "),
+        name: teamAName,
       },
       teamB: {
         id: teamBId,
         score: teamBFinalScore,
-        name: [...(teams?.[teamBId] ?? [])]
-          .sort((a, b) => (a > b ? -1 : 1))
-          .join(", "),
+        name: teamBName,
       },
       thruCount: Object.keys(winners).length,
     };
@@ -315,18 +302,24 @@ const MatchPlayLeaderboard = () => {
 
   return (
     <Show when={leaderboard()}>
-      <Table id="MatchPlayLeaderboard">
-        <TableHeader>
-          <TableRow>
-            <TableHead class="w-auto"></TableHead>
-            <TableHead>Team</TableHead>
-            <TableHead class="text-right">-</TableHead>
-            <TableHead class="text-center">Thru</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell class="font-medium w-auto px-0">
+      <section class="min-w-[365px] max-w-[365px]">
+        <div class="h-min grid grid-cols-[50px_1fr_40px_50px]">
+          <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
+            {" "}
+          </span>
+          <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
+            Team
+          </span>
+          <span class="flex items-center h-10 text-sm font-medium text-muted-foreground">
+            -
+          </span>
+          <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
+            Thru
+          </span>
+        </div>
+        <div>
+          <div class="grid grid-cols-[50px_1fr_40px_50px] items-center">
+            <span class="text-sm align-middle font-medium w-auto px-0 items-center flex">
               <button
                 onClick={() => toggleRow(leaderboard().teamA?.id)}
                 class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
@@ -338,31 +331,31 @@ const MatchPlayLeaderboard = () => {
                 )}
                 <TableIcon size={14} />
               </button>
-            </TableCell>
-            <TableCell class="font-medium">
+            </span>
+            <span class="text-sm align-middle px-2 font-medium">
               {leaderboard().teamA?.name}
-            </TableCell>
-            <TableCell class="font-medium text-right">
+            </span>
+
+            <span class="flex items-center h-10 text-sm font-medium">
               {leaderboard().teamA?.score}
-            </TableCell>
-            <TableCell class="font-medium text-center">
+            </span>
+
+            <span class="text-sm align-middle font-medium px-2 text-center">
               {leaderboard().thruCount}
-            </TableCell>
-          </TableRow>
-          <Show when={expandedRow()[leaderboard().teamA?.id]}>
-            <TableRow>
-              <TableCell colspan="4" class="p-0">
-                <Scorecard
-                  pars={pars}
-                  teamData={() =>
-                    holesPerTeam()?.[leaderboard().teamA?.id] ?? {}
-                  }
-                />
-              </TableCell>
-            </TableRow>
-          </Show>
-          <TableRow>
-            <TableCell class="font-medium w-auto px-0">
+            </span>
+          </div>
+        </div>
+
+        <Show when={expandedRow()[leaderboard().teamA?.id]}>
+          <Scorecard
+            courseHoles={courseHoles}
+            teamData={() => holesPerTeam()?.[leaderboard().teamA?.id] ?? {}}
+          />
+        </Show>
+
+        <div>
+          <div class="grid grid-cols-[50px_1fr_40px_50px] items-center">
+            <span class="text-sm align-middle font-medium w-auto px-0 items-center flex">
               <button
                 onClick={() => toggleRow(leaderboard().teamB?.id)}
                 class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
@@ -374,31 +367,28 @@ const MatchPlayLeaderboard = () => {
                 )}
                 <TableIcon size={14} />
               </button>
-            </TableCell>
-            <TableCell class="font-medium">
+            </span>
+            <span class="text-sm align-middle px-2 font-medium">
               {leaderboard().teamB?.name}
-            </TableCell>
-            <TableCell class="font-medium text-right">
+            </span>
+
+            <span class="flex items-center h-10 text-sm font-medium">
               {leaderboard().teamB?.score}
-            </TableCell>
-            <TableCell class="font-medium text-center">
+            </span>
+
+            <span class="text-sm align-middle font-medium px-2 text-center">
               {leaderboard().thruCount}
-            </TableCell>
-          </TableRow>
-          <Show when={expandedRow()[leaderboard().teamB?.id]}>
-            <TableRow>
-              <TableCell colspan="4" class="p-0">
-                <Scorecard
-                  pars={pars}
-                  teamData={() =>
-                    holesPerTeam()?.[leaderboard().teamB?.id] || {}
-                  }
-                />
-              </TableCell>
-            </TableRow>
-          </Show>
-        </TableBody>
-      </Table>
+            </span>
+          </div>
+        </div>
+
+        <Show when={expandedRow()[leaderboard().teamB?.id]}>
+          <Scorecard
+            courseHoles={courseHoles}
+            teamData={() => holesPerTeam()?.[leaderboard().teamB?.id] ?? {}}
+          />
+        </Show>
+      </section>
     </Show>
   );
 };

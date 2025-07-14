@@ -5,8 +5,6 @@ export type Hole = {
   id: string;
   playerId: string;
   tournamentId: string;
-  par: number;
-  handicap: number;
   number: number;
   score: string;
   teamId?: string;
@@ -16,8 +14,6 @@ export type Hole = {
 export type HoleWithMetadata = {
   id: string;
   score: string;
-  par: number;
-  handicap: number;
   number: number;
   playerId: string;
   teamId: string;
