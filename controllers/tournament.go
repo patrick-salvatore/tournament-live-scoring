@@ -301,8 +301,8 @@ func generateTeams(tournamentId string, players []models.Player, teamCount int) 
 type LeaderboardRow struct {
 	TeamId         string `json:"teamId"`
 	TeamName       string `json:"teamName"`
-	Gross          int    `json:"grossScore,omitempty"`
-	Net            int    `json:"netScore,omitempty"`
+	Gross          int    `json:"grossScore"`
+	Net            int    `json:"netScore"`
 	MatchPlayScore string `json:"matchPlayScore,omitempty"`
 	Thru           int    `json:"thru"`
 }
@@ -341,13 +341,47 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		courseTeeData := course.Meta.Tees[playerTee]
 
 		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, float64(courseTeeData.SlopeRating), courseTeeData.CourseRating, float64(courseTeeData.Par), hole.AwardedTournamentHandicap, holeIndex)
-
 		(*holes)[index] = hole
 	}
 
 	var leaderboardRows = getTeamLeaderboard(holes, courseHoles)
-
 	return e.JSON(http.StatusOK, leaderboardRows)
+}
+
+func (hc *TournamentController) HandleGetHolesForLeaderboard(e *core.RequestEvent) error {
+	tournamentId := e.Request.PathValue("tournamentId")
+
+	course, err := models.GetCourseByTournamentId(hc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")
+	}
+
+	players, err := models.GetPlayersByTournament(hc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetPlayersByTournament")
+	}
+
+	var playerMap = make(map[string]models.Player)
+	for _, player := range *players {
+		playerMap[player.Id] = player
+	}
+
+	holes, err := models.GetHolesForLeaderboard(hc.db, tournamentId)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetHolesForLeaderboard")
+	}
+
+	for index, hole := range *holes {
+		playerTee := playerMap[hole.PlayerId].Tee
+		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
+		courseTeeData := course.Meta.Tees[playerTee]
+
+		hole.StrokeHole = getStrokeHole(hole.PlayerHandicap, float64(courseTeeData.SlopeRating), courseTeeData.CourseRating, float64(courseTeeData.Par), hole.AwardedTournamentHandicap, holeIndex)
+
+		(*holes)[index] = hole
+	}
+
+	return e.JSON(http.StatusOK, holes)
 }
 
 func groupHolesByPlayerByTeam(holes []models.HoleWithMetadata) map[string]map[int][]models.HoleWithMetadata {
@@ -378,10 +412,6 @@ func getTeamLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.Cou
 
 		thruCount := 0
 		for _, teamScoreOnHole := range teamHolesMap {
-			if len(teamScoreOnHole) == 0 {
-				break
-			}
-
 			var holePar int
 			var netScore int
 			var grossScore int
@@ -429,19 +459,4 @@ func getTeamLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.Cou
 	}
 
 	return leaderboardRows
-}
-
-func groupHolesByPlayer(holes []models.HoleWithMetadata) map[string][]models.HoleWithMetadata {
-	result := make(map[string][]models.HoleWithMetadata)
-
-	for _, hole := range holes {
-		playerName := hole.PlayerName
-
-		if _, ok := result[playerName]; !ok {
-			result[playerName] = []models.HoleWithMetadata{}
-		}
-		result[playerName] = append(result[playerName], hole)
-	}
-
-	return result
 }

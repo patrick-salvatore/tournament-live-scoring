@@ -21,17 +21,17 @@ const TeamForm = () => {
     }),
   });
 
-  const onSubmit = handleSubmit(async (data) => {
+  const onSubmit = async (data) => {
     const res = await assignTeam(data.teamId.toLowerCase());
 
     authStore.save(res.token);
     navigate(`/tournament/start`, { replace: true });
-  });
+  };
 
   return (
     <Card class="pt-4">
       <Form form={form}>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent class="p-4 space-y-2">
             <TextFieldRoot
               class={cn(

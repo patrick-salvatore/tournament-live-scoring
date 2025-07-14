@@ -5,7 +5,7 @@ export const Table = (props: ComponentProps<"table">) => {
   const [local, rest] = splitProps(props, ["class"]);
 
   return (
-    <table class={cn("caption-bottom text-sm", local.class)} {...rest} />
+    <table class={cn("w-full caption-bottom text-sm", local.class)} {...rest} />
   );
 };
 

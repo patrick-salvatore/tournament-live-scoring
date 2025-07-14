@@ -70,8 +70,27 @@ const GolfScoreButton: Component<{
       return (
         <>
           <div class="absolute inset-1 border-1 border-gray-600 pointer-events-none rounded-none" />
-          <div class="absolute inset-1.5 border-1 border-gray-500 pointer-events-none rounded-none" />
         </>
+      );
+    }
+    return null;
+  };
+
+  const renderDiagonalLines = () => {
+    if (scoreType === "triple-plus") {
+      return (
+        <div
+          class="absolute inset-0 pointer-events-none"
+          style={{
+            "background-image": `repeating-linear-gradient(
+              120deg,
+              transparent,
+              transparent 2px,
+              rgba(156, 163, 175, 0.3) 2px,
+              rgba(156, 163, 175, 0.3) 4px
+            )`,
+          }}
+        />
       );
     }
     return null;
@@ -80,7 +99,7 @@ const GolfScoreButton: Component<{
   return props.par == 5 && props.score == 1 ? null : (
     <div class={cn(getButtonStyles(), props.class, `relative`)}>
       {renderInnerBorders()}
-
+      {renderDiagonalLines()}
       <span class="relative px-[8px] py-[4px]">{props.score}</span>
     </div>
   );

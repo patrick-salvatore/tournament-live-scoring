@@ -271,6 +271,7 @@ export function createForm(options = {} as any) {
       try {
         await onSubmit?.(values, event);
       } catch (error: any) {
+        console.log(error)
         form._error.set(error);
       }
     } catch (error: any) {

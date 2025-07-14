@@ -177,9 +177,7 @@ const ScoreCard = () => {
 
   const teamPlayers = createMemo(() => selectTeamPlayersMap(team()));
 
-  const holes = createMemo(() => {
-    return groupByIdMap(holesQuery.data, "number");
-  });
+  const holes = createMemo(() => groupByIdMap(holesQuery.data, "number"));
 
   const thruHole = createMemo(() => {
     const hole = Object.entries(holes()).find(([, hole]) =>

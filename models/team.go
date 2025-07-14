@@ -24,13 +24,13 @@ func GetTeamById(db dbx.Builder, teamId string) (*Team, error) {
 			SELECT 
 				teams.*
 			FROM teams
-			WHERE teams.id = {:team_id}
+			JOIN tournaments ON teams.tournament_id = tournaments.id
+			WHERE teams.id = {:team_id} AND tournaments.complete = 0
 		`).
 		Bind(dbx.Params{
 			"team_id": teamId,
 		}).
 		One(&team)
-
 	if err != nil {
 		return nil, err
 	}

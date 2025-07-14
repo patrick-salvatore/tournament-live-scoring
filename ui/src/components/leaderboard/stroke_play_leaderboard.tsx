@@ -1,5 +1,4 @@
 import { Minus, Plus, Table as TableIcon } from "lucide-solid";
-import { unwrap } from "solid-js/store";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 
@@ -7,7 +6,7 @@ import type { Leaderboard } from "~/lib/leaderboard";
 import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
-import { groupByIdMap, reduceToByIdMap } from "~/lib/utils";
+import {  reduceToByIdMap } from "~/lib/utils";
 import type { Hole } from "~/lib/hole";
 import { getTeamHoles } from "~/api/teams";
 import GolfScoreButton from "./golfscore";
@@ -87,7 +86,7 @@ const LeaderboardScorecard = (props) => {
             >
               <div class="flex min-w-[40px] text-xs">{playerName}</div>
 
-              <div class="flex flex-col min-h-[81px] justify-around items-center">
+              <div class="flex flex-col min-h-[81px] justify-end items-center gap-4 py-1">
                 <span class="text-[10px] transform -rotate-90">gross</span>
                 <span class="text-[10px] transform -rotate-90">net</span>
               </div>
@@ -137,7 +136,9 @@ const LeaderboardScorecard = (props) => {
                           : null}
                       </div>
                       <div class="font-medium min-h-[40px] flex justify-center items-center">
-                        {score() && <GolfScoreButton score={+score()} par={par()} />}
+                        {score() && (
+                          <GolfScoreButton score={+score()} par={par()} />
+                        )}
                       </div>
                       <hr />
                       <div class="text-xs font-medium min-h-[30px] flex justify-center items-center">
@@ -167,15 +168,32 @@ const StrokePlayLeaderboard = () => {
     queryKey: ["leaderboard"],
     queryFn: () => getLeaderboard(session()?.tournamentId!),
     initialData: [],
-    // refetchInterval: TEN_SECONDS,
   }));
 
   const leaderboard = createMemo(() => {
-    const groupByScore = groupByIdMap(leaderboardQuery.data, "netScore");
+    const sorted = leaderboardQuery.data.sort((a, b) =>
+      a.thru > b.thru ? -1 : 1
+    );
 
-    return Object.entries(groupByScore).sort((a, b) => {
-      return +a[0] > +b[0] ? 1 : -1;
-    });
+    const reduced = sorted.reduce((acc, row) => {
+      if (row.thru == 0) {
+        if (!acc["not_started"]) {
+          acc["not_started"] = [];
+        }
+
+        acc["not_started"].push(row);
+      } else {
+        if (!acc[row.netScore]) {
+          acc[row.netScore] = [];
+        }
+
+        acc[row.netScore].push(row);
+      }
+
+      return acc;
+    }, {} as Record<number, Leaderboard>);
+
+    return Object.entries(reduced);
   });
 
   const toggleRow = (teamId) => {
@@ -200,7 +218,7 @@ const StrokePlayLeaderboard = () => {
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
           Net
         </span>
-        <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
+        <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
           Thru
         </span>
       </div>
@@ -238,13 +256,13 @@ const StrokePlayLeaderboard = () => {
                       </span>
 
                       <span class="text-sm p-2 align-middle font-medium text-right">
-                        {netScore === 0
+                        {!netScore
                           ? "E"
                           : netScore < 0
                           ? netScore
                           : `+${netScore}`}
                       </span>
-                      <span class="text-sm p-2 align-middle font-medium text-center">
+                      <span class="text-sm p-2 align-middle font-medium text-end">
                         {row.thru ? row.thru : "-"}
                       </span>
                     </div>

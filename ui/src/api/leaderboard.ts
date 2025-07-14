@@ -4,12 +4,9 @@ import type { Hole } from "~/lib/hole";
 
 export async function getLeaderboard(
   tournamentId: string,
-  individuals = false
 ) {
   return client
-    .get<Leaderboard>(
-      `/v1/tournament/${tournamentId}/leaderboard?individuals=${individuals}`
-    )
+    .get<Leaderboard>(`/v1/tournament/${tournamentId}/leaderboard`)
     .then((res) => res.data);
 }
 

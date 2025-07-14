@@ -22,7 +22,7 @@ const WagerLeaderboard = () => {
 
   const holesQuery = useQuery<Leaderboard>(() => ({
     queryKey: ["wager", "leaderboard"],
-    queryFn: () => getLeaderboard(session()?.tournamentId!, true),
+    queryFn: () => getLeaderboard(session()?.tournamentId!),
     initialData: [],
   }));
 

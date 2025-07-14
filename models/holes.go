@@ -77,7 +77,9 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 				players.name AS player_name
 			FROM holes
 			JOIN players ON holes.player_id = players.id
-			JOIN _team_players ON _team_players.player_id = players.id 
+			JOIN _team_players ON _team_players.player_id = players.id
+			JOIN teams ON _team_players.team_id = teams.id
+			JOIN tournaments ON tournaments.id = teams.tournament_id
 			WHERE _team_players.team_id = {:team_id}
 			ORDER BY holes.number
 		`).
@@ -107,9 +109,10 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 				players.id AS player_id,
 				tournaments.awarded_handicap as awarded_handicap
 			FROM holes
-			JOIN players ON players.id = holes.player_id
+			JOIN players ON holes.player_id = players.id
 			JOIN _team_players ON _team_players.player_id = players.id
-			JOIN tournaments ON holes.tournament_id = {:tournament_id}
+			JOIN teams ON _team_players.team_id = teams.id
+			JOIN tournaments ON tournaments.id = teams.tournament_id
 			WHERE holes.tournament_id = {:tournament_id}
 			GROUP BY holes.player_id, holes.number
 			ORDER BY holes.number
