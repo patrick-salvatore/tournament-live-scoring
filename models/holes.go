@@ -15,9 +15,24 @@ type Hole struct {
 	Handicap int    `db:"handicap" json:"handicap"`
 	Number   int    `db:"number" json:"number"`
 	PlayerId string `db:"player_id" json:"playerId"`
+	TeamId   string `db:"team_id" json:"teamId"`
 
 	PlayerHandicap float64 `db:"player_handicap" json:"-"`
 	StrokeHole     int     `json:"strokeHole"`
+}
+
+type HoleWithMetadata struct {
+	Id                        string  `db:"id" json:"id"`
+	Score                     string  `db:"score" json:"score"`
+	Par                       int     `db:"par" json:"par"`
+	Handicap                  int     `db:"handicap" json:"handicap"`
+	Number                    int     `db:"number" json:"number"`
+	PlayerId                  string  `db:"player_id" json:"playerId"`
+	PlayerName                string  `db:"player_name" json:"playerName"`
+	TeamId                    string  `db:"team_id" json:"teamId"`
+	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedTournamentHandicap"`
+	StrokeHole                int     `json:"strokeHole"`
 }
 
 func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
@@ -54,14 +69,16 @@ func GetPlayerHoles(db dbx.Builder, playerId string) (*[]Hole, error) {
 	return &holes, nil
 }
 
-func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hole, error) {
-	var holes []Hole
+func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]HoleWithMetadata, error) {
+	var holes []HoleWithMetadata
 
 	err := db.
 		NewQuery(`
 			SELECT 
 				holes.*,
-				players.handicap AS player_handicap
+				_team_players.team_id AS team_id,
+				players.handicap AS player_handicap,
+				players.name AS player_name
 			FROM holes
 			JOIN players ON holes.player_id = players.id
 			JOIN _team_players ON _team_players.player_id = players.id 
@@ -79,20 +96,6 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 	}
 
 	return &holes, nil
-}
-
-type HoleWithMetadata struct {
-	Id                        string  `db:"id" json:"id"`
-	Score                     string  `db:"score" json:"score"`
-	Par                       int     `db:"par" json:"par"`
-	Handicap                  int     `db:"handicap" json:"handicap"`
-	Number                    int     `db:"number" json:"number"`
-	PlayerId                  string  `db:"player_id" json:"playerId"`
-	PlayerName                string  `db:"player_name" json:"playerName"`
-	TeamId                    string  `db:"team_id" json:"teamId"`
-	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
-	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedTournamentHandicap"`
-	StrokeHole                int     `json:"strokeHole"`
 }
 
 func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {

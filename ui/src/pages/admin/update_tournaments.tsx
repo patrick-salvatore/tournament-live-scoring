@@ -604,10 +604,6 @@ const UpdateTournaments = () => {
     initialData: [],
   }));
 
-  // const deleteMutation = useMutation<any, any, string, any>(() => ({
-  //   mutationFn: (tournamentId) => deleteTournament(tournamentId),
-  // }));
-
   return (
     <div class="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <Switch>
@@ -635,14 +631,6 @@ const UpdateTournaments = () => {
                         {tournament.name}
                       </TableCell>
                       <TableCell class="font-medium">
-                        {/* <Button
-                          variant="ghost"
-                          onClick={() => saveMutation.mutate(tournament.id)}
-                          class="p-1 text-red-600 hover:bg-red-100 rounded"
-                          title="Remove from selection"
-                        >
-                          <Trash2 size={16} />
-                        </Button> */}
                         <Button
                           variant="ghost"
                           onClick={() => setEditingTournament(tournament)}

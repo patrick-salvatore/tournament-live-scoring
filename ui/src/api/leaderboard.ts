@@ -13,9 +13,7 @@ export async function getLeaderboard(
     .then((res) => res.data);
 }
 
-export async function getHolesForLeaderboard(
-  tournamentId: string,
-) {
+export async function getHolesForLeaderboard(tournamentId: string) {
   return client
     .get<Hole[]>(`/v1/tournament/${tournamentId}/holes`)
     .then((res) => res.data);

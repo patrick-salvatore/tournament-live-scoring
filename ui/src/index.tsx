@@ -19,6 +19,7 @@ import LeaderboardRoute from "./pages/leaderboard";
 import ScoreCardRoute from "./pages/scorecard";
 import WagersRoute from "./pages/wagers";
 import AdminRoute from "./pages/admin";
+import ReadOnlyRoute from "./pages/read_only";
 
 const root = document.getElementById("root");
 
@@ -59,6 +60,7 @@ render(
               <Route path="*" component={TeamIdentity} />
             </Route>
             <AdminRoute />
+            <ReadOnlyRoute />
             <Route
               path="*"
               component={() => {

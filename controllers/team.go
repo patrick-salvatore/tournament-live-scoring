@@ -83,7 +83,7 @@ func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}
 
-	holesWithStrokeHole := []models.Hole{}
+	holesWithStrokeHole := []models.HoleWithMetadata{}
 	for _, hole := range *holes {
 		playerTee := playerMap[hole.PlayerId].Tee
 		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
