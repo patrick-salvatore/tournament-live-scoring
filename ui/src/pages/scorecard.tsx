@@ -214,13 +214,13 @@ const ScoreCard = () => {
     );
   });
 
-  const canSave = createMemo(() => {
-    const allPlayersHaveAScore = Object.values(currentHoleScoreData()).every(
-      (hole) => hole.score
-    );
+  // const canSave = createMemo(() => {
+  //   const allPlayersHaveAScore = Object.values(currentHoleScoreData()).every(
+  //     (hole) => hole.score
+  //   );
 
-    return allPlayersHaveAScore && hasUnsavedChanges();
-  });
+  //   return allPlayersHaveAScore && hasUnsavedChanges();
+  // });
 
   createEffect(() => {
     setCurrentHoleNumber(thruHole());
@@ -405,22 +405,20 @@ const ScoreCard = () => {
             </For>
           </div>
 
-          <Show when={!team().finished}>
-            <div class="mt-6 flex space-x-3">
-              <Button
-                onClick={handleSave}
-                disabled={!canSave() || saveMutation?.isPending}
-                class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-              >
-                <Show when={saveMutation?.isPending} fallback="Save Hole">
-                  <div class="flex items-center space-x-2">
-                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Saving...</span>
-                  </div>
-                </Show>
-              </Button>
-            </div>
-          </Show>
+          <div class="mt-6 flex space-x-3">
+            <Button
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges() || saveMutation?.isPending}
+              class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <Show when={saveMutation?.isPending} fallback="Save Hole">
+                <div class="flex items-center space-x-2">
+                  <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </div>
+              </Show>
+            </Button>
+          </div>
         </Show>
       </div>
 
