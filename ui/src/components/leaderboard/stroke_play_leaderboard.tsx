@@ -1,53 +1,30 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import {
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  Plus,
-  Table as TableIcon,
-} from "lucide-solid";
+import { Minus, Plus, Table as TableIcon } from "lucide-solid";
 import { unwrap } from "solid-js/store";
-import {
-  createMemo,
-  createSignal,
-  For,
-  Match,
-  Show,
-  Suspense,
-  Switch,
-  type Component,
-} from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
-import { Route } from "@solidjs/router";
 
 import type { Leaderboard } from "~/lib/leaderboard";
-import { getHolesForLeaderboard, getLeaderboard } from "~/api/leaderboard";
+import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
-import { groupByIdMap } from "~/lib/utils";
-import TournamentView from "~/components/tournament_view";
-import { useTournamentStore } from "~/state/tournament";
+import { groupByIdMap, reduceToByIdMap } from "~/lib/utils";
 import type { Hole } from "~/lib/hole";
 import { getTeamHoles } from "~/api/teams";
-import MatchPlayLeaderboard from "~/components/leaderboard/match_play_leaderboard";
 import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
-
-const TEN_SECONDS = 10 * 1000;
+import { useCourseStore } from "~/state/course";
 
 const LeaderboardScorecard = (props) => {
+  const course = useCourseStore(identity);
   const holesQuery = useQuery<Hole[]>(() => ({
     queryKey: ["leaderboard", "holes", "team", props.teamId],
     queryFn: () => getTeamHoles(props.teamId),
     initialData: [],
   }));
+
+  const courseHoles = createMemo(() => {
+    return reduceToByIdMap(course().holes, "number");
+  });
 
   const holesPerPlayer = createMemo(() => {
     const scoresPerHole = holesQuery.data.reduce((acc, hole) => {
@@ -56,23 +33,19 @@ const LeaderboardScorecard = (props) => {
       }
 
       if (!acc[hole.number][hole.playerName]) {
-        acc[hole.number][hole.playerName] = unwrap(hole);
+        acc[hole.number][hole.playerName] = unwrap({
+          ...hole,
+          ...courseHoles()[hole.number],
+        });
       }
 
       return acc;
     }, {});
 
-    return scoresPerHole as Record<string, Record<string, Hole>>;
-  });
-
-  const pars = createMemo(() => {
-    return holesQuery.data.reduce((acc, hole) => {
-      if (!acc[hole.number]) {
-        acc[hole.number] = hole;
-      }
-
-      return acc;
-    }, {});
+    return scoresPerHole as Record<
+      string,
+      Record<string, Hole & { par: number; handicap: number }>
+    >;
   });
 
   const holeNumbers = createMemo(() => {
@@ -120,7 +93,9 @@ const LeaderboardScorecard = (props) => {
             {(holeNumber) => (
               <div class="flex flex-col gap-1 bg-white p-2 text-center font-medium text-sm min-w-[60px] border-b">
                 <span class="text-xs">{holeNumber}</span>
-                <span class="text-[10px]">{pars()[holeNumber]?.par}</span>
+                <span class="text-[10px]">
+                  {courseHoles()[holeNumber]?.par}
+                </span>
               </div>
             )}
           </For>
