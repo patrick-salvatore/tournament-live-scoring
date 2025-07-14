@@ -264,9 +264,9 @@ func generateTeams(tournamentId string, players []models.Player, teamCount int) 
 		return players[i].Handicap < players[j].Handicap
 	})
 
-	teamSize := len(players) / teamCount
-	teams := make([]models.TeamWithPlayerCreate, teamSize)
-	for i := range teamSize {
+	teamsCount := len(players) / teamCount
+	teams := make([]models.TeamWithPlayerCreate, teamsCount)
+	for i := range teamsCount {
 		teams[i] = models.TeamWithPlayerCreate{
 			Team: models.TeamCreate{
 				TournamentId: tournamentId,
@@ -275,25 +275,16 @@ func generateTeams(tournamentId string, players []models.Player, teamCount int) 
 		}
 	}
 
-	forward := true
+	start := 0
+	end := len(players) - 1
 	index := 0
+	for start < end {
+		teams[index].Players = append(teams[index].Players, players[start])
+		teams[index].Players = append(teams[index].Players, players[end])
 
-	for _, player := range players {
-		teams[index].Players = append(teams[index].Players, player)
-
-		if forward {
-			index++
-			if index == teamCount {
-				index = teamCount - 1
-				forward = false
-			}
-		} else {
-			index--
-			if index < 0 {
-				index = 0
-				forward = true
-			}
-		}
+		index++
+		start++
+		end--
 	}
 
 	for i, team := range teams {
