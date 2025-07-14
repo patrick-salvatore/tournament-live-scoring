@@ -11,8 +11,6 @@ import (
 type Hole struct {
 	Id       string `db:"id" json:"id"`
 	Score    string `db:"score" json:"score"`
-	Par      int    `db:"par" json:"par"`
-	Handicap int    `db:"handicap" json:"handicap"`
 	Number   int    `db:"number" json:"number"`
 	PlayerId string `db:"player_id" json:"playerId"`
 	TeamId   string `db:"team_id" json:"teamId"`
@@ -24,8 +22,6 @@ type Hole struct {
 type HoleWithMetadata struct {
 	Id                        string  `db:"id" json:"id"`
 	Score                     string  `db:"score" json:"score"`
-	Par                       int     `db:"par" json:"par"`
-	Handicap                  int     `db:"handicap" json:"handicap"`
 	Number                    int     `db:"number" json:"number"`
 	PlayerId                  string  `db:"player_id" json:"playerId"`
 	PlayerName                string  `db:"player_name" json:"playerName"`
@@ -135,16 +131,14 @@ func CreateHoleForPlayer(db dbx.Builder, playerId string, tournamentId string, c
 
 	err := db.
 		NewQuery(`
-		INSERT INTO holes (tournament_id, player_id, number, par, handicap, created, updated)
-		VALUES ({:tournament_id}, {:player_id}, {:number}, {:par}, {:handicap}, {:created}, {:updated})
+		INSERT INTO holes (tournament_id, player_id, number, created, updated)
+		VALUES ({:tournament_id}, {:player_id}, {:number}, {:created}, {:updated})
 		RETURNING *
 	`).
 		Bind(dbx.Params{
 			"tournament_id": tournamentId,
 			"player_id":     playerId,
 			"number":        courseHole.Number,
-			"par":           courseHole.Par,
-			"handicap":      courseHole.Handicap,
 			"created":       time.Now().Format(time.RFC3339),
 			"updated":       time.Now().Format(time.RFC3339),
 		}).

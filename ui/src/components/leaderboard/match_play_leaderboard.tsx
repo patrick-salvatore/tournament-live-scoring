@@ -81,15 +81,15 @@ const Scorecard = (props) => {
             {(playerName, i) => (
               <For each={holeNumbers()}>
                 {(holeNumber) => {
-                  const holeData = props.teamData()[holeNumber]
+                  const holeData = () =>props.teamData()[holeNumber]
                     ? (Object.values(props.teamData()[holeNumber]).find(
                         (p: any) => p.playerName === playerName
                       ) as any)
                     : null;
 
-                  const strokeHole = holeData.strokeHole;
-                  const score = holeData.score;
-                  const par = holeData.par;
+                  const strokeHole = () => holeData().strokeHole;
+                  const score = () => holeData().score;
+                  const par = () => holeData().par;
 
                   return (
                     <div
@@ -99,8 +99,8 @@ const Scorecard = (props) => {
                       )}
                     >
                       <div class="flex justify-center items-center min-h-[10px] gap-1">
-                        {strokeHole
-                          ? Array(strokeHole)
+                        {strokeHole()
+                          ? Array(strokeHole())
                               .fill(null)
                               .map(() => (
                                 <div class="w-1 h-1 bg-red-500 rounded-full flex items-center justify-center"></div>
@@ -108,14 +108,14 @@ const Scorecard = (props) => {
                           : null}
                       </div>
                       <div class="font-medium min-h-[40px] flex justify-center items-center">
-                        {score && <GolfScoreButton score={+score} par={par} />}
+                        {score() && <GolfScoreButton score={+score()} par={par()} />}
                       </div>
                       <hr />
                       <div class="text-xs font-medium min-h-[30px] flex justify-center items-center">
-                        {score && strokeHole
-                          ? +score - strokeHole
-                          : score
-                          ? +score
+                        {score() && strokeHole()
+                          ? +score() - strokeHole()
+                          : score()
+                          ? +score()
                           : ""}
                       </div>
                     </div>
@@ -157,10 +157,10 @@ const MatchPlayLeaderboard = () => {
       }
 
       if (!acc[hole.teamId][hole.number][hole.playerId]) {
-        acc[hole.teamId][hole.number][hole.playerId] = unwrap({
+        acc[hole.teamId][hole.number][hole.playerId] = {
           ...hole,
           ...courseHoles()[hole.number],
-        });
+        };
       }
 
       return acc;
@@ -232,7 +232,7 @@ const MatchPlayLeaderboard = () => {
       const teamAScore = +teamA.score - teamA.strokeHole;
       const teamBScore = +teamB.score - teamB.strokeHole;
 
-      let whoWon = 'tie'
+      let whoWon = "tie";
       if (teamAScore < teamBScore) {
         whoWon = "teamA won";
         holesWon++;

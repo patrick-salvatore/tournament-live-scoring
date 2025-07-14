@@ -1,4 +1,5 @@
 import type { Component } from "solid-js";
+import { cn } from "~/lib/cn";
 
 const GolfScoreButton: Component<{
   score: number;
@@ -20,7 +21,7 @@ const GolfScoreButton: Component<{
 
   const getButtonStyles = () => {
     const baseStyles =
-      "text-sm font-bold flex items-center justify-center bg-white hover:bg-gray-50 text-gray-900 border-gray-600";
+      "text-sm font-bold flex items-center justify-center bg-white hover:bg-gray-50 text-gray-900 border-gray-600 bg-transparent";
 
     switch (scoreType) {
       case "albatross":
@@ -77,7 +78,7 @@ const GolfScoreButton: Component<{
   };
 
   return props.par == 5 && props.score == 1 ? null : (
-    <div class={`${getButtonStyles()} ${props.class || ""} relative`}>
+    <div class={cn(getButtonStyles(), props.class, `relative`)}>
       {renderInnerBorders()}
 
       <span class="relative px-[8px] py-[4px]">{props.score}</span>

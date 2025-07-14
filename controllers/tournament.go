@@ -318,11 +318,15 @@ type LeaderboardRow struct {
 
 func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error {
 	tournamentId := e.Request.PathValue("tournamentId")
-	individuals := e.Request.URL.Query().Get("individuals")
 
 	course, err := models.GetCourseByTournamentId(tc.db, tournamentId)
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), "GetCourseByTournamentId")
+	}
+
+	var courseHoles = make(models.CourseHoleDataMap)
+	for _, hole := range course.Meta.Holes {
+		courseHoles[hole.Number] = hole
 	}
 
 	players, err := models.GetPlayersByTournament(tc.db, tournamentId)
@@ -350,12 +354,7 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		(*holes)[index] = hole
 	}
 
-	var leaderboardRows []LeaderboardRow
-	if individuals == "false" {
-		leaderboardRows = getTeamLeaderboard(holes)
-	} else {
-		leaderboardRows = getIndividualLeaderboard(holes)
-	}
+	var leaderboardRows = getTeamLeaderboard(holes, courseHoles)
 
 	return e.JSON(http.StatusOK, leaderboardRows)
 }
@@ -376,7 +375,7 @@ func groupHolesByPlayerByTeam(holes []models.HoleWithMetadata) map[string]map[in
 	return result
 }
 
-func getTeamLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
+func getTeamLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.CourseHoleDataMap) []LeaderboardRow {
 	holesByTeamAndPlayer := groupHolesByPlayerByTeam(*holes)
 	leaderboardRows := []LeaderboardRow{}
 
@@ -399,8 +398,15 @@ func getTeamLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
 			for _, hole := range teamScoreOnHole {
 				players[hole.PlayerName] = true
 
-				if len(hole.Score) > 0 && hole.Score != "X" {
-					holeScore, _ := strconv.Atoi(hole.Score)
+				if len(hole.Score) > 0 {
+					holePar = courseHoles[hole.Number].Par
+
+					var holeScore int
+					if hole.Score == "X" {
+						holeScore = 3 + holePar
+					} else {
+						holeScore, _ = strconv.Atoi(hole.Score)
+					}
 
 					if holeScore <= grossScore || grossScore == 0 {
 						netScore = holeScore
@@ -410,7 +416,6 @@ func getTeamLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
 							netScore = holeScore - hole.StrokeHole
 						}
 					}
-					holePar = hole.Par
 				}
 			}
 
@@ -448,41 +453,4 @@ func groupHolesByPlayer(holes []models.HoleWithMetadata) map[string][]models.Hol
 	}
 
 	return result
-}
-
-func getIndividualLeaderboard(holes *[]models.HoleWithMetadata) []LeaderboardRow {
-	holesByPlayer := groupHolesByPlayer(*holes)
-	leaderboardRows := []LeaderboardRow{}
-
-	for playerName, holes := range holesByPlayer {
-		leaderboardRow := LeaderboardRow{
-			TeamName: playerName,
-		}
-
-		if len(holes) == 0 {
-			break
-		}
-
-		var thruHole int
-		for _, hole := range holes {
-			if len(hole.Score) > 0 && hole.Score != "X" {
-				thruHole++
-				holeScore, _ := strconv.Atoi(hole.Score)
-
-				grossScore := holeScore
-
-				netScore := holeScore
-				if hole.StrokeHole > 0 {
-					netScore = holeScore - hole.StrokeHole
-				}
-
-				leaderboardRow.Thru = thruHole
-				leaderboardRow.Gross += grossScore - hole.Par
-				leaderboardRow.Net += netScore - hole.Par
-			}
-		}
-		leaderboardRows = append(leaderboardRows, leaderboardRow)
-	}
-
-	return leaderboardRows
 }

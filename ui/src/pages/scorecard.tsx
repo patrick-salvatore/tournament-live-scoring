@@ -26,6 +26,7 @@ import { getTeamHoles, updateTeam } from "~/api/teams";
 import { updateHoles } from "~/api/holes";
 import type { PlayerId } from "~/lib/team";
 import TournamentView from "~/components/tournament_view";
+import { teamHoleLeaderboardQueryKey } from "~/components/leaderboard/stroke_play_leaderboard";
 
 const FIRST_HOLE = 1;
 const NUM_HOLES = 18;
@@ -205,22 +206,21 @@ const ScoreCard = () => {
     const currentData = currentHoleScoreData();
 
     if (!originalHoles || !currentData) return false;
-    return (
-      originalHoles.some((hole) => {
-        const currentScore = currentData[hole.playerId]?.score;
-        const originalScore = hole.score;
-        return currentScore && originalScore !== currentScore;
-      }) && currentHoleNumber() <= thruHole()
-    );
+
+    return originalHoles.some((hole) => {
+      const currentScore = currentData[hole.playerId]?.score;
+      const originalScore = hole.score;
+      return currentScore && originalScore !== currentScore;
+    });
   });
 
-  // const canSave = createMemo(() => {
-  //   const allPlayersHaveAScore = Object.values(currentHoleScoreData()).every(
-  //     (hole) => hole.score
-  //   );
+  const canSave = createMemo(() => {
+    const allPlayersHaveAScore = Object.values(currentHoleScoreData()).every(
+      (hole) => hole.score
+    );
 
-  //   return allPlayersHaveAScore && hasUnsavedChanges();
-  // });
+    return allPlayersHaveAScore && hasUnsavedChanges();
+  });
 
   createEffect(() => {
     setCurrentHoleNumber(thruHole());
@@ -291,8 +291,16 @@ const ScoreCard = () => {
       })
       .filter(Boolean) as UpdateHolePayload[];
 
+    queryClient.invalidateQueries({
+      queryKey: teamHoleLeaderboardQueryKey(team().id),
+    });
+
     saveMutation?.mutate(payload);
   };
+
+  createEffect(() => {
+    console.log(saveMutation);
+  });
 
   return (
     <>
@@ -406,18 +414,22 @@ const ScoreCard = () => {
           </div>
 
           <div class="mt-6 flex space-x-3">
-            <Button
-              onClick={handleSave}
-              disabled={!hasUnsavedChanges() || saveMutation?.isPending}
-              class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <Show when={saveMutation?.isPending} fallback="Save Hole">
-                <div class="flex items-center space-x-2">
-                  <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Saving...</span>
-                </div>
-              </Show>
-            </Button>
+            <Show when={!team().finished}>
+              <Button
+                onClick={handleSave}
+                disabled={
+                  !canSave() || !hasUnsavedChanges() || saveMutation?.isPending
+                }
+                class="flex-1 bg-green-600  disabled:bg-green-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+              >
+                <Show when={saveMutation?.isPending} fallback="Save Hole">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Saving...</span>
+                  </div>
+                </Show>
+              </Button>
+            </Show>
           </div>
         </Show>
       </div>

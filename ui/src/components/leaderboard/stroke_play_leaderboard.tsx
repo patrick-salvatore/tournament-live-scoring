@@ -14,10 +14,18 @@ import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
 import { useCourseStore } from "~/state/course";
 
+export const teamHoleLeaderboardQueryKey = (teamId) => [
+  "leaderboard",
+  "holes",
+  "team",
+  teamId,
+];
+
 const LeaderboardScorecard = (props) => {
   const course = useCourseStore(identity);
+
   const holesQuery = useQuery<Hole[]>(() => ({
-    queryKey: ["leaderboard", "holes", "team", props.teamId],
+    queryKey: teamHoleLeaderboardQueryKey(props.teamId),
     queryFn: () => getTeamHoles(props.teamId),
     initialData: [],
   }));
@@ -33,10 +41,10 @@ const LeaderboardScorecard = (props) => {
       }
 
       if (!acc[hole.number][hole.playerName]) {
-        acc[hole.number][hole.playerName] = unwrap({
+        acc[hole.number][hole.playerName] = {
           ...hole,
           ...courseHoles()[hole.number],
-        });
+        };
       }
 
       return acc;
@@ -108,9 +116,9 @@ const LeaderboardScorecard = (props) => {
                 {(holeNumber) => {
                   const holeData = holesPerPlayer()[holeNumber][playerName];
 
-                  const strokeHole = holeData.strokeHole;
-                  const score = holeData.score;
-                  const par = holeData.par;
+                  const strokeHole = () => holeData.strokeHole;
+                  const score = () => holeData.score;
+                  const par = () => holeData.par;
 
                   return (
                     <div
@@ -120,8 +128,8 @@ const LeaderboardScorecard = (props) => {
                       )}
                     >
                       <div class="flex justify-center items-center min-h-[10px] gap-1">
-                        {strokeHole
-                          ? Array(strokeHole)
+                        {strokeHole()
+                          ? Array(strokeHole())
                               .fill(null)
                               .map(() => (
                                 <div class="w-1 h-1 bg-red-500 rounded-full flex items-center justify-center"></div>
@@ -129,14 +137,14 @@ const LeaderboardScorecard = (props) => {
                           : null}
                       </div>
                       <div class="font-medium min-h-[40px] flex justify-center items-center">
-                        {score && <GolfScoreButton score={+score} par={par} />}
+                        {score() && <GolfScoreButton score={+score()} par={par()} />}
                       </div>
                       <hr />
                       <div class="text-xs font-medium min-h-[30px] flex justify-center items-center">
-                        {score && strokeHole
-                          ? +score - strokeHole
-                          : score
-                          ? +score
+                        {score() && strokeHole()
+                          ? +score() - strokeHole()
+                          : score()
+                          ? +score()
                           : ""}
                       </div>
                     </div>
