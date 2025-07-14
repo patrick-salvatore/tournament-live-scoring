@@ -1,5 +1,5 @@
 import z from "zod";
-import { createMemo, For } from "solid-js";
+import { createEffect, createMemo, For } from "solid-js";
 import { Route, useNavigate } from "@solidjs/router";
 
 import { Button } from "~/components/ui/button";
@@ -36,6 +36,14 @@ function Tournament() {
     navigate(`/tournament/scorecard`, {
       replace: true,
     });
+  });
+
+  createEffect(() => {
+    if (team().started) {
+      navigate(`/tournament/scorecard`, {
+        replace: true,
+      });
+    }
   });
 
   return (

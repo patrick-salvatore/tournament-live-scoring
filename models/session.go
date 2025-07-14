@@ -29,7 +29,6 @@ type ValidatedSession struct {
 const (
 	sessionExpiresInTime         = 2 * 24 * time.Hour // 2 day
 	activityCheckIntervalSeconds = 60 * 60            // 1 hour
-
 )
 
 func CreateSession(db dbx.Builder, teamId string) (*Session, error) {
