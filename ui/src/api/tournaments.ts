@@ -1,4 +1,3 @@
-import type { Session } from "~/lib/auth";
 import client from "./client";
 import type { Tournament, TournamentFormat } from "~/lib/tournaments";
 
@@ -15,7 +14,10 @@ export async function getTournamentById(id: string) {
 export async function startTournament({
   teamId,
   tournamentId: tournamentId,
-}: Session) {
+}: {
+  teamId: string;
+  tournamentId: string;
+}) {
   return client.post<void>(
     `/v1/tournament/${tournamentId}/team/${teamId}/start`
   );

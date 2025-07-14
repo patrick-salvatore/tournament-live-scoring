@@ -32,7 +32,10 @@ export const authCheck = query(async () => {
       throw redirect("/tournament");
     }
 
-    setSessionStore({ tournamentId: session.tournamentId, teamId: session.teamId });
+    setSessionStore({
+      tournamentId: session.tournamentId,
+      teamId: session.teamId,
+    });
   } catch {
     throw redirect("/tournament");
   }
