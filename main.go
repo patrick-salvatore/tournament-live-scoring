@@ -56,7 +56,7 @@ func main() {
 		router.PUT("v1/tournaments/{tournamentId}", tournamentCtr.HandleUpdateTournament)
 
 		// /tournament - misc.
-		router.GET("v1/tournament/{tournamentId}/team-sheet", tournamentCtr.HandleGetTeamSheetFromTournament)
+		router.GET("v1/tournament/{tournamentUuId}/team-sheet", tournamentCtr.HandleGetTeamSheetFromTournament)
 		router.GET("v1/tournament_formats", tournamentCtr.HandleGetAllTournamentFormats)
 
 		// /course
