@@ -162,8 +162,6 @@ const LeaderboardScorecard = (props) => {
   );
 };
 
-const NOT_STARTED = "not_started";
-
 const TeamStrokePlayLeaderboard = () => {
   const [expandedRow, setExpandedRow] = createSignal<string>();
   const session = useSessionStore(identity);

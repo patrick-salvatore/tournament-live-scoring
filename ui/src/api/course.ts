@@ -1,4 +1,4 @@
-import { toCourse, type Course, type CourseResponse } from "~/lib/course";
+import { toCourse, type CourseResponse } from "~/lib/course";
 import client from "./client";
 
 export async function getCourses() {

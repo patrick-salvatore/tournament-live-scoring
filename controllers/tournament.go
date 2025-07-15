@@ -305,6 +305,7 @@ type LeaderboardRow struct {
 	Net            int    `json:"netScore"`
 	MatchPlayScore string `json:"matchPlayScore,omitempty"`
 	Thru           int    `json:"thru"`
+	CoursePar      int    `json:"coursePar"`
 }
 
 func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error {
@@ -335,10 +336,16 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		return e.Error(http.StatusInternalServerError, err.Error(), "GetHolesForLeaderboard")
 	}
 
+	var coursePar int
+
 	for index, hole := range *holes {
 		playerTee := hole.Tee
 		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
 		courseTeeData := course.Meta.Tees[playerTee]
+
+		if coursePar == 0 {
+			coursePar = course.Meta.Tees[playerTee].Par
+		}
 
 		hole.StrokeHole = getStrokeHole(
 			hole.PlayerHandicap,
@@ -353,9 +360,9 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 	var leaderboardRows []LeaderboardRow
 
 	if individuals == "false" {
-		leaderboardRows = getTeamLeaderboard(holes, courseHoles)
+		leaderboardRows = getTeamLeaderboard(holes, courseHoles, coursePar)
 	} else {
-		leaderboardRows = getIndividualLeaderboard(holes, courseHoles)
+		leaderboardRows = getIndividualLeaderboard(holes, courseHoles, coursePar)
 	}
 
 	return e.JSON(http.StatusOK, leaderboardRows)
@@ -377,12 +384,14 @@ func groupHolesByPlayerByTeam(holes []models.HoleWithMetadata) map[string]map[in
 	return result
 }
 
-func getTeamLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.CourseHoleDataMap) []LeaderboardRow {
+func getTeamLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.CourseHoleDataMap, coursePar int) []LeaderboardRow {
 	holesByTeamAndPlayer := groupHolesByPlayerByTeam(*holes)
 	leaderboardRows := []LeaderboardRow{}
 
 	for teamId, teamHolesMap := range holesByTeamAndPlayer {
-		leaderboardRow := LeaderboardRow{}
+		leaderboardRow := LeaderboardRow{
+			CoursePar: coursePar,
+		}
 		players := map[string]bool{}
 
 		leaderboardRow.Id = teamId
@@ -453,13 +462,14 @@ func groupHolesByPlayer(holes []models.HoleWithMetadata) map[string][]models.Hol
 	return result
 }
 
-func getIndividualLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.CourseHoleDataMap) []LeaderboardRow {
+func getIndividualLeaderboard(holes *[]models.HoleWithMetadata, courseHoles models.CourseHoleDataMap, coursePar int) []LeaderboardRow {
 	holesByPlayer := groupHolesByPlayer(*holes)
 	leaderboardRows := []LeaderboardRow{}
 
 	for playerName, holes := range holesByPlayer {
 		leaderboardRow := LeaderboardRow{
-			TeamName: playerName,
+			TeamName:  playerName,
+			CoursePar: coursePar,
 		}
 
 		var thruHole int

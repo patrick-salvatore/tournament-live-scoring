@@ -119,6 +119,7 @@ const NOT_STARTED = "not_started";
 const SoloStrokePlayLeaderboard = () => {
   const [expandedRow, setExpandedRow] = createSignal<string>();
   const session = useSessionStore(identity);
+  const course = useCourseStore(identity);
 
   const leaderboardQuery = useQuery<Leaderboard>(() => ({
     queryKey: [session()?.tournamentId, "individual", "leaderboard"],
@@ -187,8 +188,22 @@ const SoloStrokePlayLeaderboard = () => {
             {(row) => {
               const isTied = teams.length > 1;
               const pos = position() + 1;
-              const netScore = row.netScore;
-              const grossScore = row.grossScore;
+              const netScore = !row.netScore
+                ? "E"
+                : row.netScore < 0
+                ? row.netScore
+                : `+${row.netScore}`;
+              const grossScore = !row.grossScore
+                ? "E"
+                : row.grossScore < 0
+                ? row.grossScore
+                : `+${row.grossScore}`;
+
+              const finalGross = row.grossScore
+                ? row.coursePar + row.grossScore
+                : 0;
+
+              const finalNet = row.netScore ? row.coursePar + row.netScore : 0;
 
               return (
                 <>
@@ -215,19 +230,11 @@ const SoloStrokePlayLeaderboard = () => {
                     </span>
 
                     <span class="text-sm p-2 align-middle font-medium text-right">
-                      {!grossScore
-                        ? "E"
-                        : grossScore < 0
-                        ? grossScore
-                        : `+${grossScore}`}
+                      {row.thru == 18 ? finalGross : grossScore}
                     </span>
 
                     <span class="text-sm p-2 align-middle font-medium text-right">
-                      {!netScore
-                        ? "E"
-                        : netScore < 0
-                        ? netScore
-                        : `+${netScore}`}
+                      {row.thru == 18 ? finalNet : netScore}
                     </span>
                     <span class="text-sm p-2 align-middle font-medium text-end">
                       {row.thru ? row.thru : "-"}
