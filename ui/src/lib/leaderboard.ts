@@ -1,5 +1,5 @@
 export type LeaderboardRow = {
-  teamId: string;
+  id: string;
   teamName: string;
   grossScore: number;
   netScore: number;

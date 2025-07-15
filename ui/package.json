@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@kobalte/core": "^0.13.10",
+    "@motionone/solid": "^10.16.4",
     "@solidjs/router": "^0.15.1",
     "@tanstack/solid-query": "^5.81.2",
     "axios": "^1.10.0",
@@ -29,6 +30,7 @@
     "clsx": "^2.1.1",
     "goober": "^2.1.16",
     "lucide-solid": "^0.523.0",
+    "motion": "^12.23.5",
     "pocketbase": "^0.26.1",
     "solid-js": "^1.9.5",
     "uuid": "^11.1.0",

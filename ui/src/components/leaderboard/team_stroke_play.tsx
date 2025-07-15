@@ -6,25 +6,26 @@ import type { Leaderboard } from "~/lib/leaderboard";
 import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
-import {  reduceToByIdMap } from "~/lib/utils";
+import { reduceToByIdMap } from "~/lib/utils";
 import type { Hole } from "~/lib/hole";
-import { getTeamHoles } from "~/api/teams";
 import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
 import { useCourseStore } from "~/state/course";
+import { toggleDisableSnapContainer } from "~/components/snap_container";
+import { getTeamHoles } from "~/api/holes";
 
-export const teamHoleLeaderboardQueryKey = (teamId) => [
+export const getTeamHoleLeaderboardQueryKey = (id) => [
   "leaderboard",
   "holes",
   "team",
-  teamId,
+  id,
 ];
 
 const LeaderboardScorecard = (props) => {
   const course = useCourseStore(identity);
 
   const holesQuery = useQuery<Hole[]>(() => ({
-    queryKey: teamHoleLeaderboardQueryKey(props.teamId),
+    queryKey: getTeamHoleLeaderboardQueryKey(props.teamId),
     queryFn: () => getTeamHoles(props.teamId),
     initialData: [],
   }));
@@ -160,13 +161,15 @@ const LeaderboardScorecard = (props) => {
   );
 };
 
-const StrokePlayLeaderboard = () => {
-  const [expandedRow, setExpandedRow] = createSignal({});
+const NOT_STARTED = "not_started";
+
+const TeamStrokePlayLeaderboard = () => {
+  const [expandedRow, setExpandedRow] = createSignal<string>();
   const session = useSessionStore(identity);
 
   const leaderboardQuery = useQuery<Leaderboard>(() => ({
-    queryKey: ["leaderboard"],
-    queryFn: () => getLeaderboard(session()?.tournamentId!),
+    queryKey: [session()?.tournamentId, "solo", "leaderboard"],
+    queryFn: () => getLeaderboard({ tournamentId: session()?.tournamentId! }),
     initialData: [],
   }));
 
@@ -177,11 +180,11 @@ const StrokePlayLeaderboard = () => {
 
     const reduced = sorted.reduce((acc, row) => {
       if (row.thru == 0) {
-        if (!acc["not_started"]) {
-          acc["not_started"] = [];
+        if (!acc[NOT_STARTED]) {
+          acc[NOT_STARTED] = [];
         }
 
-        acc["not_started"].push(row);
+        acc[NOT_STARTED].push(row);
       } else {
         if (!acc[row.netScore]) {
           acc[row.netScore] = [];
@@ -196,11 +199,14 @@ const StrokePlayLeaderboard = () => {
     return Object.entries(reduced);
   });
 
-  const toggleRow = (teamId) => {
-    setExpandedRow((prev) => ({
-      ...prev,
-      [teamId]: prev[teamId] ? !prev[teamId] : true,
-    }));
+  const toggleRow = (id) => {
+    if (expandedRow() === id) {
+      toggleDisableSnapContainer(false);
+    } else {
+      toggleDisableSnapContainer(true);
+    }
+
+    setExpandedRow((prev) => (prev == id ? null : id));
   };
 
   return (
@@ -222,63 +228,61 @@ const StrokePlayLeaderboard = () => {
           Thru
         </span>
       </div>
-      <div>
-        <For each={leaderboard()}>
-          {([, teams], position) => (
-            <For each={teams}>
-              {(row) => {
-                const isTied = teams.length > 1;
-                const pos = position() + 1;
-                const netScore = row.netScore;
 
-                return (
-                  <>
-                    <div class="grid grid-cols-[50px_1fr_120px_1fr_1fr]">
-                      <span class="text-sm p-2 align-middle font-medium w-auto px-0 items-center flex">
-                        <button
-                          onClick={() => toggleRow(row.teamId)}
-                          class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          {expandedRow()[row.teamId] ? (
-                            <Minus size={12} />
-                          ) : (
-                            <Plus size={12} />
-                          )}
-                          <TableIcon size={14} />
-                        </button>
-                      </span>
-                      <span class="text-sm p-2 align-middle font-medium">
-                        {isTied ? `T${pos}` : pos}
-                      </span>
+      <For each={leaderboard()}>
+        {([pos, teams]) => (
+          <For each={teams}>
+            {(row) => {
+              const isTied = teams.length > 1;
+              const netScore = row.netScore;
 
-                      <span class="text-sm p-2 align-middle font-medium">
-                        {row.teamName}
-                      </span>
+              return (
+                <>
+                  <div class="grid grid-cols-[50px_1fr_120px_1fr_1fr]">
+                    <span class="text-sm p-2 align-middle font-medium w-auto px-0 items-center flex">
+                      <button
+                        onClick={() => toggleRow(row.id)}
+                        class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        {expandedRow() == row.id ? (
+                          <Minus size={12} />
+                        ) : (
+                          <Plus size={12} />
+                        )}
+                        <TableIcon size={14} />
+                      </button>
+                    </span>
+                    <span class="text-sm p-2 align-middle font-medium">
+                      {pos === NOT_STARTED ? "-" : isTied ? `T${pos}` : pos}
+                    </span>
 
-                      <span class="text-sm p-2 align-middle font-medium text-right">
-                        {!netScore
-                          ? "E"
-                          : netScore < 0
-                          ? netScore
-                          : `+${netScore}`}
-                      </span>
-                      <span class="text-sm p-2 align-middle font-medium text-end">
-                        {row.thru ? row.thru : "-"}
-                      </span>
-                    </div>
+                    <span class="text-sm p-2 align-middle font-medium">
+                      {row.teamName}
+                    </span>
 
-                    <Show when={expandedRow()[row.teamId]}>
-                      <LeaderboardScorecard teamId={row.teamId} />
-                    </Show>
-                  </>
-                );
-              }}
-            </For>
-          )}
-        </For>
-      </div>
+                    <span class="text-sm p-2 align-middle font-medium text-right">
+                      {!netScore
+                        ? "E"
+                        : netScore < 0
+                        ? netScore
+                        : `+${netScore}`}
+                    </span>
+                    <span class="text-sm p-2 align-middle font-medium text-end">
+                      {row.thru ? row.thru : "-"}
+                    </span>
+                  </div>
+
+                  <Show when={expandedRow() == row.id}>
+                    <LeaderboardScorecard teamId={row.id} />
+                  </Show>
+                </>
+              );
+            }}
+          </For>
+        )}
+      </For>
     </section>
   );
 };
 
-export default StrokePlayLeaderboard;
+export default TeamStrokePlayLeaderboard;

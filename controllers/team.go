@@ -78,7 +78,7 @@ func (tc *TeamsController) HandleGetTeamHoles(e *core.RequestEvent) error {
 		return err
 	}
 
-	holes, err := models.GetHolesForTeam(tc.db, teamId, team.TournamentId)
+	holes, err := models.GetTeamHoles(tc.db, teamId)
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), nil)
 	}

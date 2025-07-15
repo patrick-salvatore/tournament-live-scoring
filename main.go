@@ -51,7 +51,6 @@ func main() {
 		protectedRouter.GET("v1/tournament/{tournamentId}", tournamentCtr.HandleGetTournamentById)
 		protectedRouter.POST("v1/tournament/{tournamentId}/team/{teamId}/start", tournamentCtr.HandleStartTournamentForTeam)
 		protectedRouter.GET("v1/tournament/{tournamentId}/leaderboard", tournamentCtr.HandleGetLeaderboard)
-		protectedRouter.GET("v1/tournament/{tournamentId}/holes", tournamentCtr.HandleGetHolesForLeaderboard)
 		router.GET("v1/tournaments", tournamentCtr.HandleGetTournaments)
 		router.POST("v1/tournaments", tournamentCtr.HandleCreateTournament)
 		router.PUT("v1/tournaments/{tournamentId}", tournamentCtr.HandleUpdateTournament)
@@ -73,6 +72,7 @@ func main() {
 		// /holes
 		holesCtr := controllers.NewHolesController(app)
 		protectedRouter.PUT("v1/holes", holesCtr.HandleUpdateTeamHoleScores)
+		protectedRouter.GET("v1/holes", holesCtr.HandleGetHoles)
 
 		// APP
 		se.Router.GET("/{path...}", apis.Static(ui.DistDirFS, true)).

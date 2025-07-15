@@ -22,11 +22,11 @@ import type { Score, Hole, UpdateHolePayload } from "~/lib/hole";
 
 import { Route } from "@solidjs/router";
 import { selectTeamPlayersMap, useTeamStore } from "~/state/team";
-import { getTeamHoles, updateTeam } from "~/api/teams";
-import { updateHoles } from "~/api/holes";
+import { updateTeam } from "~/api/teams";
+import { getTeamHoles, updateHoles } from "~/api/holes";
 import type { PlayerId } from "~/lib/team";
 import TournamentView from "~/components/tournament_view";
-import { teamHoleLeaderboardQueryKey } from "~/components/leaderboard/stroke_play_leaderboard";
+import { getTeamHoleLeaderboardQueryKey } from "~/components/leaderboard/team_stroke_play";
 
 const FIRST_HOLE = 1;
 const NUM_HOLES = 18;
@@ -151,7 +151,7 @@ const ScoreCard = () => {
   const [currentHoleScoreData, setCurrentHoleScoreData] =
     createSignal<HoleScores>({});
 
-  const queryKey = ["holes"];
+  const queryKey = [team().id, "holes"];
 
   const holesQuery = useQuery(() => ({
     queryKey: queryKey,
@@ -290,15 +290,11 @@ const ScoreCard = () => {
       .filter(Boolean) as UpdateHolePayload[];
 
     queryClient.invalidateQueries({
-      queryKey: teamHoleLeaderboardQueryKey(team().id),
+      queryKey: getTeamHoleLeaderboardQueryKey(team().id),
     });
 
     saveMutation?.mutate(payload);
   };
-
-  createEffect(() => {
-    console.log(saveMutation);
-  });
 
   return (
     <>

@@ -26,7 +26,6 @@ const AppShell: ParentComponent = (props) => {
         </div>
       </header>
       <main class="flex-1 container mx-auto p-3">{props.children}</main>
-      <footer class="flex items-center justify-center flex-col gap-4 px-4 pb-4"></footer>
     </div>
   );
 };

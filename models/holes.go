@@ -19,27 +19,34 @@ type Hole struct {
 	StrokeHole     int     `json:"strokeHole"`
 }
 
+type HoleMetaData struct {
+	PlayerName                string  `db:"player_name" json:"playerName"`
+	TeamId                    string  `db:"team_id" json:"teamId"`
+	TournamentId              string  `db:"tournament_id" json:"tournamentId"`
+	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
+	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedTournamentHandicap"`
+}
+
 type HoleWithMetadata struct {
 	Id                        string  `db:"id" json:"id"`
 	Score                     string  `db:"score" json:"score"`
 	Number                    int     `db:"number" json:"number"`
 	PlayerId                  string  `db:"player_id" json:"playerId"`
+	StrokeHole                int     `json:"strokeHole"`
 	PlayerName                string  `db:"player_name" json:"playerName"`
 	TeamId                    string  `db:"team_id" json:"teamId"`
+	Tee                       string  `db:"tee" json:"tee"`
+	TournamentId              string  `db:"tournament_id" json:"tournamentId"`
 	PlayerHandicap            float64 `db:"player_handicap" json:"playerHandicap"`
 	AwardedTournamentHandicap float64 `db:"awarded_handicap" json:"awardedTournamentHandicap"`
-	StrokeHole                int     `json:"strokeHole"`
 }
 
-func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
-	var hole Hole
+func GetHoles(db dbx.Builder) (*[]HoleWithMetadata, error) {
+	var hole []HoleWithMetadata
 
 	err := db.
-		NewQuery("SELECT * FROM holes WHERE id = {:hole_id}").
-		Bind(dbx.Params{
-			"hole_id": holeId,
-		}).
-		One(&hole)
+		NewQuery("SELECT * FROM holes").
+		All(&hole)
 
 	if err != nil {
 		return nil, err
@@ -48,11 +55,28 @@ func GetPlayerHole(db dbx.Builder, holeId string) (*Hole, error) {
 	return &hole, nil
 }
 
-func GetPlayerHoles(db dbx.Builder, playerId string) (*[]Hole, error) {
-	var holes []Hole
+func GetPlayerHoles(db dbx.Builder, playerId string) (*[]HoleWithMetadata, error) {
+	var holes []HoleWithMetadata
 
 	err := db.
-		NewQuery("SELECT * FROM holes WHERE player_id = {:player_id} ORDER BY number").
+		NewQuery(`
+			SELECT 
+				holes.*,
+				_team_players.team_id AS team_id,
+				_team_players.tee AS tee,
+				players.name AS player_name,
+				players.handicap AS player_handicap,
+				players.id AS player_id,
+				tournaments.awarded_handicap as awarded_handicap
+			FROM holes
+			JOIN players ON holes.player_id = players.id
+			JOIN _team_players ON _team_players.player_id = players.id
+			JOIN teams ON _team_players.team_id = teams.id
+			JOIN tournaments ON tournaments.id = teams.tournament_id
+			WHERE holes.player_id = {:player_id}
+			GROUP BY holes.player_id, holes.number
+			ORDER BY holes.number
+		`).
 		Bind(dbx.Params{
 			"player_id": playerId,
 		}).
@@ -65,7 +89,7 @@ func GetPlayerHoles(db dbx.Builder, playerId string) (*[]Hole, error) {
 	return &holes, nil
 }
 
-func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]HoleWithMetadata, error) {
+func GetTeamHoles(db dbx.Builder, teamId string) (*[]HoleWithMetadata, error) {
 	var holes []HoleWithMetadata
 
 	err := db.
@@ -73,8 +97,11 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 			SELECT 
 				holes.*,
 				_team_players.team_id AS team_id,
+				_team_players.tee AS tee,
+				players.name AS player_name,
 				players.handicap AS player_handicap,
-				players.name AS player_name
+				players.id AS player_id,
+				tournaments.awarded_handicap AS awarded_handicap
 			FROM holes
 			JOIN players ON holes.player_id = players.id
 			JOIN _team_players ON _team_players.player_id = players.id
@@ -84,8 +111,7 @@ func GetHolesForTeam(db dbx.Builder, teamId string, tournamentId string) (*[]Hol
 			ORDER BY holes.number
 		`).
 		Bind(dbx.Params{
-			"tournament_id": tournamentId,
-			"team_id":       teamId,
+			"team_id": teamId,
 		}).
 		All(&holes)
 
@@ -104,10 +130,10 @@ func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMet
 			SELECT 
 				holes.*,
 				_team_players.team_id AS team_id,
+				_team_players.tee AS tee,
 				players.name AS player_name,
 				players.handicap AS player_handicap,
-				players.id AS player_id,
-				tournaments.awarded_handicap as awarded_handicap
+				tournaments.awarded_handicap AS awarded_handicap
 			FROM holes
 			JOIN players ON holes.player_id = players.id
 			JOIN _team_players ON _team_players.player_id = players.id

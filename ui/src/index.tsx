@@ -17,7 +17,7 @@ import TeamIdentity from "./pages";
 import StartRoute from "./pages/start_tournament";
 import LeaderboardRoute from "./pages/leaderboard";
 import ScoreCardRoute from "./pages/scorecard";
-import WagersRoute from "./pages/wagers";
+
 import AdminRoute from "./pages/admin";
 
 const root = document.getElementById("root");
@@ -55,7 +55,6 @@ render(
               <StartRoute />
               <ScoreCardRoute />
               <LeaderboardRoute />
-              <WagersRoute />
               <Route path="*" component={TeamIdentity} />
             </Route>
             <AdminRoute />

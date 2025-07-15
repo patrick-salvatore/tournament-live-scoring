@@ -29,7 +29,3 @@ export async function assignTeam(teamId: string) {
     .post<TeamAssignment>(`/v1/team/${teamId}/assign`)
     .then((res) => res.data);
 }
-
-export async function getTeamHoles(teamId: string) {
-  return client.get<Hole[]>(`/v1/team/${teamId}/holes`).then((res) => res.data);
-}

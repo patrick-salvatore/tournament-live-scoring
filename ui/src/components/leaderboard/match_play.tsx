@@ -9,7 +9,6 @@ import { unwrap } from "solid-js/store";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useQuery } from "@tanstack/solid-query";
 
-import { getHolesForLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
 import type { Hole } from "~/lib/hole";
@@ -18,6 +17,8 @@ import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
 import { useCourseStore } from "~/state/course";
 import { reduceToByIdMap } from "~/lib/utils";
+import { toggleDisableSnapContainer } from "~/components/snap_container";
+import { getTournamentHoles } from "~/api/holes";
 
 const Scorecard = (props) => {
   const holeNumbers = createMemo(() => {
@@ -81,11 +82,12 @@ const Scorecard = (props) => {
             {(playerName, i) => (
               <For each={holeNumbers()}>
                 {(holeNumber) => {
-                  const holeData = () =>props.teamData()[holeNumber]
-                    ? (Object.values(props.teamData()[holeNumber]).find(
-                        (p: any) => p.playerName === playerName
-                      ) as any)
-                    : null;
+                  const holeData = () =>
+                    props.teamData()[holeNumber]
+                      ? (Object.values(props.teamData()[holeNumber]).find(
+                          (p: any) => p.playerName === playerName
+                        ) as any)
+                      : null;
 
                   const strokeHole = () => holeData().strokeHole;
                   const score = () => holeData().score;
@@ -108,7 +110,9 @@ const Scorecard = (props) => {
                           : null}
                       </div>
                       <div class="font-medium min-h-[40px] flex justify-center items-center">
-                        {score() && <GolfScoreButton score={+score()} par={par()} />}
+                        {score() && (
+                          <GolfScoreButton score={+score()} par={par()} />
+                        )}
                       </div>
                       <hr />
                       <div class="text-xs font-medium min-h-[30px] flex justify-center items-center">
@@ -137,7 +141,7 @@ const MatchPlayLeaderboard = () => {
 
   const holesQuery = useQuery<Hole[]>(() => ({
     queryKey: ["leaderboard", "holes", "matchplay"],
-    queryFn: () => getHolesForLeaderboard(session()?.tournamentId!),
+    queryFn: () => getTournamentHoles(session()?.tournamentId!),
     initialData: [],
     // refetchInterval: TEN_SECONDS,
   }));
@@ -294,10 +298,13 @@ const MatchPlayLeaderboard = () => {
   });
 
   const toggleRow = (teamId) => {
-    setExpandedRow((prev) => ({
-      ...prev,
-      [teamId]: prev[teamId] ? !prev[teamId] : true,
-    }));
+    if (expandedRow() === teamId) {
+      toggleDisableSnapContainer(false);
+    } else {
+      toggleDisableSnapContainer(true);
+    }
+
+    setExpandedRow((prev) => (prev == teamId ? null : teamId));
   };
 
   return (
@@ -324,7 +331,7 @@ const MatchPlayLeaderboard = () => {
                 onClick={() => toggleRow(leaderboard().teamA?.id)}
                 class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
               >
-                {expandedRow()[leaderboard().teamA?.id] ? (
+                {expandedRow() === leaderboard().teamA?.id ? (
                   <Minus size={12} />
                 ) : (
                   <Plus size={12} />
@@ -346,7 +353,7 @@ const MatchPlayLeaderboard = () => {
           </div>
         </div>
 
-        <Show when={expandedRow()[leaderboard().teamA?.id]}>
+        <Show when={expandedRow() == leaderboard().teamA?.id}>
           <Scorecard
             courseHoles={courseHoles}
             teamData={() => holesPerTeam()?.[leaderboard().teamA?.id] ?? {}}
@@ -360,7 +367,7 @@ const MatchPlayLeaderboard = () => {
                 onClick={() => toggleRow(leaderboard().teamB?.id)}
                 class="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
               >
-                {expandedRow()[leaderboard().teamB?.id] ? (
+                {expandedRow() === leaderboard().teamB?.id ? (
                   <Minus size={12} />
                 ) : (
                   <Plus size={12} />
@@ -382,7 +389,7 @@ const MatchPlayLeaderboard = () => {
           </div>
         </div>
 
-        <Show when={expandedRow()[leaderboard().teamB?.id]}>
+        <Show when={expandedRow() === leaderboard().teamB?.id}>
           <Scorecard
             courseHoles={courseHoles}
             teamData={() => holesPerTeam()?.[leaderboard().teamB?.id] ?? {}}
