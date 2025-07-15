@@ -55,6 +55,53 @@ func GetHoles(db dbx.Builder) (*[]HoleWithMetadata, error) {
 	return &hole, nil
 }
 
+func GetTournamentHoles(db dbx.Builder, tournamentId string, teamIds []string) (*[]HoleWithMetadata, error) {
+	var holes []HoleWithMetadata
+
+	if len(teamIds) == 0 {
+		return &holes, nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(teamIds))
+	params := dbx.Params{"tournament_id": tournamentId}
+
+	for i, teamId := range teamIds {
+		placeholder := fmt.Sprintf("team_id_%d", i)
+		placeholders[i] = fmt.Sprintf("{:%s}", placeholder)
+		params[placeholder] = teamId
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 
+			holes.*, 
+			players.name AS player_name, 
+			players.handicap AS player_handicap, 
+			tournaments.awarded_handicap as awarded_handicap,
+			_team_players.team_id as team_id,
+			_team_players.tee as tee
+		FROM holes 
+		JOIN players ON holes.player_id = players.id 
+		JOIN tournaments ON holes.tournament_id = tournaments.id 
+		JOIN _team_players ON _team_players.player_id = players.id 
+			AND _team_players.tournament_id = holes.tournament_id 
+		WHERE holes.tournament_id = {:tournament_id} 
+		AND _team_players.team_id IN (%s) 
+		ORDER BY holes.player_id, holes.number 
+	`, strings.Join(placeholders, ", "))
+
+	err := db.
+		NewQuery(query).
+		Bind(params).
+		All(&holes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &holes, nil
+}
+
 func GetPlayerHoles(db dbx.Builder, playerId string) (*[]HoleWithMetadata, error) {
 	var holes []HoleWithMetadata
 
@@ -122,38 +169,34 @@ func GetTeamHoles(db dbx.Builder, teamId string) (*[]HoleWithMetadata, error) {
 	return &holes, nil
 }
 
-func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
-	var holes []HoleWithMetadata
+// func GetHolesForLeaderboard(db dbx.Builder, tournamentId string) (*[]HoleWithMetadata, error) {
+// 	var holes []HoleWithMetadata
 
-	err := db.
-		NewQuery(`
-			SELECT 
-				holes.*,
-				_team_players.team_id AS team_id,
-				_team_players.tee AS tee,
-				players.name AS player_name,
-				players.handicap AS player_handicap,
-				tournaments.awarded_handicap AS awarded_handicap
-			FROM holes
-			JOIN players ON holes.player_id = players.id
-			JOIN _team_players ON _team_players.player_id = players.id
-			JOIN teams ON _team_players.team_id = teams.id
-			JOIN tournaments ON tournaments.id = teams.tournament_id
-			WHERE holes.tournament_id = {:tournament_id}
-			GROUP BY holes.player_id, holes.number
-			ORDER BY holes.number
-		`).
-		Bind(dbx.Params{
-			"tournament_id": tournamentId,
-		}).
-		All(&holes)
+// 	err := db.
+// 		NewQuery(`
+// 			SELECT
+// 				holes.*,
+// 				players.name AS player_name,
+// 				players.handicap AS player_handicap,
+// 				tournaments.awarded_handicap as awarded_handicap
+// 			FROM holes
+// 			JOIN players ON holes.player_id = players.id
+//       JOIN tournaments ON holes.tournament_id = tournaments.id
+// 			WHERE holes.tournament_id = {:tournament_id} AND teams.id = {:team_id}
+// 			ORDER BY holes.player_id, holes.number
+// 		`).
+// 		Bind(dbx.Params{
+// 			"tournament_id": tournamentId,
+// 			"team_id":       teamId,
+// 		}).
+// 		All(&holes)
 
-	if err != nil {
-		return nil, err
-	}
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return &holes, nil
-}
+// 	return &holes, nil
+// }
 
 func CreateHoleForPlayer(db dbx.Builder, playerId string, tournamentId string, courseHole CourseHoleData) (*Hole, error) {
 	var hole Hole

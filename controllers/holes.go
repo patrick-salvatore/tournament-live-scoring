@@ -58,7 +58,16 @@ func (hc *HolesController) HandleUpdateTeamHoleScores(e *core.RequestEvent) erro
 func (hc *HolesController) HandleGetHoles(e *core.RequestEvent) error {
 	tournamentId := e.Request.URL.Query().Get("tournamentId")
 	if len(tournamentId) > 0 {
-		data, err := models.GetHolesForLeaderboard(hc.db, tournamentId)
+		teams, err := models.GetTeamsByTournamentId(hc.db, tournamentId)
+		if err != nil {
+			return e.Error(http.StatusInternalServerError, err.Error(), "GetTeamsByTournamentId")
+		}
+		teamIds := []string{}
+		for _, team := range *teams {
+			teamIds = append(teamIds, team.Id)
+		}
+
+		data, err := models.GetTournamentHoles(hc.db, tournamentId, teamIds)
 		if err != nil {
 			return e.Error(http.StatusInternalServerError, err.Error(), "GetHolesForLeaderboard")
 		}

@@ -14,9 +14,9 @@ export async function getPlayerHoles(playerId: string) {
     .then((res) => res.data);
 }
 
-export async function getTournamentHoles(playerId: string) {
+export async function getTournamentHoles(tournamentId: string) {
   return client
-    .get<Hole[]>(`/v1/holes?playerId=${playerId}`)
+    .get<Hole[]>(`/v1/holes?tournamentId=${tournamentId}`)
     .then((res) => res.data);
 }
 

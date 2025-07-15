@@ -143,7 +143,6 @@ const MatchPlayLeaderboard = () => {
     queryKey: ["leaderboard", "holes", "matchplay"],
     queryFn: () => getTournamentHoles(session()?.tournamentId!),
     initialData: [],
-    // refetchInterval: TEN_SECONDS,
   }));
 
   const courseHoles = createMemo(() => {

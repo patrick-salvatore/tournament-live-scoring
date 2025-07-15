@@ -321,23 +321,22 @@ func (tc *TournamentController) HandleGetLeaderboard(e *core.RequestEvent) error
 		courseHoles[hole.Number] = hole
 	}
 
-	players, err := models.GetPlayersByTournament(tc.db, tournamentId)
+	teams, err := models.GetTeamsByTournamentId(tc.db, tournamentId)
 	if err != nil {
-		return e.Error(http.StatusInternalServerError, err.Error(), "GetPlayersByTournament")
+		return e.Error(http.StatusInternalServerError, err.Error(), "GetTeamsByTournamentId")
+	}
+	teamIds := []string{}
+	for _, team := range *teams {
+		teamIds = append(teamIds, team.Id)
 	}
 
-	var playerMap = make(map[string]models.Player)
-	for _, player := range *players {
-		playerMap[player.Id] = player
-	}
-
-	holes, err := models.GetHolesForLeaderboard(tc.db, tournamentId)
+	holes, err := models.GetTournamentHoles(tc.db, tournamentId, teamIds)
 	if err != nil {
 		return e.Error(http.StatusInternalServerError, err.Error(), "GetHolesForLeaderboard")
 	}
 
 	for index, hole := range *holes {
-		playerTee := playerMap[hole.PlayerId].Tee
+		playerTee := hole.Tee
 		holeIndex := (course.Meta.Holes)[hole.Number-1].Handicap
 		courseTeeData := course.Meta.Tees[playerTee]
 
@@ -463,13 +462,11 @@ func getIndividualLeaderboard(holes *[]models.HoleWithMetadata, courseHoles mode
 			TeamName: playerName,
 		}
 
-		if len(holes) == 0 {
-			break
-		}
-
 		var thruHole int
 		for _, hole := range holes {
-			leaderboardRow.Id = hole.PlayerId
+			if len(leaderboardRow.Id) == 0 {
+				leaderboardRow.Id = hole.PlayerId
+			}
 
 			if len(hole.Score) > 0 {
 				holePar := courseHoles[hole.Number].Par
@@ -488,13 +485,12 @@ func getIndividualLeaderboard(holes *[]models.HoleWithMetadata, courseHoles mode
 					netScore = holeScore - hole.StrokeHole
 				}
 
-				thruHole++
+				thruHole += 1
 				leaderboardRow.Thru = thruHole
 				leaderboardRow.Gross += grossScore - holePar
 				leaderboardRow.Net += netScore - holePar
 			}
 		}
-		fmt.Println(leaderboardRow)
 		leaderboardRows = append(leaderboardRows, leaderboardRow)
 	}
 

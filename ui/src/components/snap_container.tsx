@@ -38,9 +38,9 @@ const SnapContainer: Component<{ children: JSX.Element }> = (props) => {
   const MIN_SWIPE_VELOCITY = 0.3; // pixels per millisecond
 
   const handleTouchStart = (e: TouchEvent) => {
-    // if (disableSnap()) {
-    //   return;
-    // }
+    if (disableSnap()) {
+      return;
+    }
 
     const touch = e.touches[0];
     startX = touch.clientX;

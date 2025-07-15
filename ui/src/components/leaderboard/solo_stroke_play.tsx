@@ -6,13 +6,14 @@ import type { Leaderboard } from "~/lib/leaderboard";
 import { getLeaderboard } from "~/api/leaderboard";
 import { useSessionStore } from "~/state/session";
 import { identity } from "~/state/helpers";
-import { reduceToByIdMap } from "~/lib/utils";
+import { groupByIdMap, reduceToByIdMap } from "~/lib/utils";
 import type { Hole } from "~/lib/hole";
 import GolfScoreButton from "./golfscore";
 import { cn } from "~/lib/cn";
 import { useCourseStore } from "~/state/course";
 import { toggleDisableSnapContainer } from "../snap_container";
 import { getPlayerHoles } from "~/api/holes";
+import { unwrap } from "solid-js/store";
 
 const LeaderboardScorecard = (props) => {
   const course = useCourseStore(identity);
@@ -28,8 +29,6 @@ const LeaderboardScorecard = (props) => {
   });
 
   const holesPerPlayer = createMemo(() => {
-    console.log(holesQuery.data, props.playerId)
-
     return holesQuery.data.map((hole) => ({
       ...hole,
       ...courseHoles()[hole.number],
@@ -132,29 +131,21 @@ const SoloStrokePlayLeaderboard = () => {
   }));
 
   const leaderboard = createMemo(() => {
-    const sorted = leaderboardQuery.data.sort((a, b) =>
-      a.thru > b.thru ? -1 : 1
-    );
+    const unwrappedleaderboard = unwrap(leaderboardQuery.data);
 
-    const reduced = sorted.reduce((acc, row) => {
-      if (row.thru == 0) {
-        if (!acc[NOT_STARTED]) {
-          acc[NOT_STARTED] = [];
-        }
+    const notStarted = unwrappedleaderboard.filter((r) => !r.thru);
+    const started = unwrappedleaderboard
+      .filter((r) => r.thru)
+      .sort((a, b) => (a.thru < b.thru ? 1 : -1));
 
-        acc[NOT_STARTED].push(row);
-      } else {
-        if (!acc[row.netScore]) {
-          acc[row.netScore] = [];
-        }
+    const groupByScore = groupByIdMap(started, "netScore");
 
-        acc[row.netScore].push(row);
-      }
-
-      return acc;
-    }, {} as Record<number, Leaderboard>);
-
-    return Object.entries(reduced);
+    return {
+      started: Object.entries(groupByScore).sort((a, b) => {
+        return +a[0] > +b[0] ? 1 : -1;
+      }),
+      notStarted,
+    };
   });
 
   const toggleRow = (id) => {
@@ -169,7 +160,7 @@ const SoloStrokePlayLeaderboard = () => {
 
   return (
     <section class="min-w-[365px] max-w-[365px]">
-      <div class="h-min grid grid-cols-[50px_1fr_120px_1fr_1fr]">
+      <div class="h-min grid grid-cols-[50px_1fr_120px_1fr_1fr_1fr]">
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
           {" "}
         </span>
@@ -180,6 +171,9 @@ const SoloStrokePlayLeaderboard = () => {
           Team
         </span>
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
+          Gross
+        </span>
+        <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
           Net
         </span>
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
@@ -187,16 +181,18 @@ const SoloStrokePlayLeaderboard = () => {
         </span>
       </div>
 
-      <For each={leaderboard()}>
-        {([pos, teams]) => (
+      <For each={leaderboard().started}>
+        {([, teams], position) => (
           <For each={teams}>
             {(row) => {
               const isTied = teams.length > 1;
+              const pos = position() + 1;
               const netScore = row.netScore;
+              const grossScore = row.grossScore;
 
               return (
                 <>
-                  <div class="grid grid-cols-[50px_1fr_120px_1fr_1fr]">
+                  <div class="grid grid-cols-[50px_1fr_120px_1fr_1fr_1fr]">
                     <span class="text-sm p-2 align-middle font-medium w-auto px-0 items-center flex">
                       <button
                         onClick={() => toggleRow(row.id)}
@@ -211,11 +207,19 @@ const SoloStrokePlayLeaderboard = () => {
                       </button>
                     </span>
                     <span class="text-sm p-2 align-middle font-medium">
-                      {pos === NOT_STARTED ? "-" : isTied ? `T${pos}` : pos}
+                      {isTied ? `T${pos}` : pos}
                     </span>
 
                     <span class="text-sm p-2 align-middle font-medium">
                       {row.teamName}
+                    </span>
+
+                    <span class="text-sm p-2 align-middle font-medium text-right">
+                      {!grossScore
+                        ? "E"
+                        : grossScore < 0
+                        ? grossScore
+                        : `+${grossScore}`}
                     </span>
 
                     <span class="text-sm p-2 align-middle font-medium text-right">
@@ -237,6 +241,23 @@ const SoloStrokePlayLeaderboard = () => {
               );
             }}
           </For>
+        )}
+      </For>
+      <For each={leaderboard().notStarted}>
+        {(row) => (
+          <div class="grid grid-cols-[50px_1fr_120px_1fr_1fr]">
+            <span class="text-sm p-2 align-middle font-medium w-auto px-0 items-center flex"></span>
+            <span class="text-sm p-2 align-middle font-medium">-</span>
+
+            <span class="text-sm p-2 align-middle font-medium">
+              {row.teamName}
+            </span>
+
+            <span class="text-sm p-2 align-middle font-medium text-right">
+              E
+            </span>
+            <span class="text-sm p-2 align-middle font-medium text-end">-</span>
+          </div>
         )}
       </For>
     </section>
