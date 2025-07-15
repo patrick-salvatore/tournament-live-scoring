@@ -169,7 +169,7 @@ const SoloStrokePlayLeaderboard = () => {
           Pos.
         </span>
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
-          Team
+          Player
         </span>
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground justify-end">
           Gross
@@ -237,7 +237,7 @@ const SoloStrokePlayLeaderboard = () => {
                       {row.thru == 18 ? finalNet : netScore}
                     </span>
                     <span class="text-sm p-2 align-middle font-medium text-end">
-                      {row.thru ? row.thru : "-"}
+                      {row.thru == 18 ? "F" : row.thru}
                     </span>
                   </div>
 

@@ -36,6 +36,10 @@ const LeaderboardScorecard = (props) => {
   });
 
   const holesPerPlayer = createMemo(() => {
+    if (holesQuery.error) {
+      return {};
+    }
+
     const scoresPerHole = holesQuery.data.reduce((acc, hole) => {
       if (!acc[hole.number]) {
         acc[hole.number] = {};
@@ -202,6 +206,7 @@ const TeamStrokePlayLeaderboard = () => {
 
   return (
     <section class="min-w-[365px] max-w-[365px]">
+      <h1 class="text-lg font-semibold capitalize">Teams</h1>
       <div class="h-min grid grid-cols-[50px_1fr_120px_1fr_1fr]">
         <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
           {" "}
@@ -260,7 +265,7 @@ const TeamStrokePlayLeaderboard = () => {
                         : `+${netScore}`}
                     </span>
                     <span class="text-sm p-2 align-middle font-medium text-end">
-                      {row.thru ? row.thru : "-"}
+                      {row.thru == 18 ? "F" : row.thru}
                     </span>
                   </div>
 

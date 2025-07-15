@@ -83,12 +83,7 @@ const Scorecard = (props) => {
               <For each={holeNumbers()}>
                 {(holeNumber) => {
                   const holeData = () =>
-                    props.teamData()[holeNumber]
-                      ? (Object.values(props.teamData()[holeNumber]).find(
-                          (p: any) => p.playerName === playerName
-                        ) as any)
-                      : null;
-
+                    props.teamData()[holeNumber][playerName];
                   const strokeHole = () => holeData().strokeHole;
                   const score = () => holeData().score;
                   const par = () => holeData().par;
@@ -150,6 +145,10 @@ const MatchPlayLeaderboard = () => {
   });
 
   const holesPerTeam = createMemo(() => {
+    if (holesQuery.error) {
+      return {};
+    }
+
     const scoresPerHole = holesQuery.data.reduce((acc, hole) => {
       if (!acc[hole.teamId]) {
         acc[hole.teamId] = {};
@@ -159,8 +158,8 @@ const MatchPlayLeaderboard = () => {
         acc[hole.teamId][hole.number] = {};
       }
 
-      if (!acc[hole.teamId][hole.number][hole.playerId]) {
-        acc[hole.teamId][hole.number][hole.playerId] = {
+      if (!acc[hole.teamId][hole.number][hole.playerName]) {
+        acc[hole.teamId][hole.number][hole.playerName] = {
           ...hole,
           ...courseHoles()[hole.number],
         };
@@ -173,6 +172,10 @@ const MatchPlayLeaderboard = () => {
   });
 
   const leaderboard = createMemo(() => {
+    if (holesQuery.error) {
+      return;
+    }
+
     if (!holesQuery.data.length) return {};
 
     const teams = {};
@@ -308,7 +311,7 @@ const MatchPlayLeaderboard = () => {
 
   return (
     <Show when={leaderboard()}>
-      <section class="min-w-[365px] max-w-[365px]">
+      <section class="">
         <div class="h-min grid grid-cols-[50px_1fr_40px_50px]">
           <span class="flex items-center h-10 text-sm px-2 font-medium text-muted-foreground">
             {" "}
@@ -347,18 +350,16 @@ const MatchPlayLeaderboard = () => {
             </span>
 
             <span class="text-sm align-middle font-medium px-2 text-center">
-              {leaderboard().thruCount}
+              {leaderboard().thruCount == 18 ? "F" : leaderboard().thruCount}
             </span>
           </div>
         </div>
-
         <Show when={expandedRow() == leaderboard().teamA?.id}>
           <Scorecard
             courseHoles={courseHoles}
             teamData={() => holesPerTeam()?.[leaderboard().teamA?.id] ?? {}}
           />
         </Show>
-
         <div>
           <div class="grid grid-cols-[50px_1fr_40px_50px] items-center">
             <span class="text-sm align-middle font-medium w-auto px-0 items-center flex">
@@ -383,11 +384,10 @@ const MatchPlayLeaderboard = () => {
             </span>
 
             <span class="text-sm align-middle font-medium px-2 text-center">
-              {leaderboard().thruCount}
+              {leaderboard().thruCount == 18 ? "F" : leaderboard().thruCount}
             </span>
           </div>
         </div>
-
         <Show when={expandedRow() === leaderboard().teamB?.id}>
           <Scorecard
             courseHoles={courseHoles}

@@ -130,7 +130,7 @@ const SnapContainer: Component<{ children: JSX.Element }> = (props) => {
   };
 
   return (
-    <div class="relative h-full overflow-hidden">
+    <div class="relative h-full overflow-hidden py-3">
       <div class="mb-4 flex justify-center space-x-1">
         <For each={childrenArray()}>
           {(_, index) => (
