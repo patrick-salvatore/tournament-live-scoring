@@ -165,19 +165,20 @@ func CreateTeam(db dbx.Builder, tournamentId string, name string) (*Team, error)
 	return &team, nil
 }
 
-func CreateTeamPlayerLookup(db dbx.Builder, teamId string, playerId string, tee string) (bool, error) {
+func CreateTeamPlayerLookup(db dbx.Builder, teamId string, playerId string, tee string, tournamentId string) (bool, error) {
 	_, err := db.
 		NewQuery(`
-			INSERT INTO _team_players (team_id, player_id, tee, created, updated)
-			VALUES ({:team_id}, {:player_id}, {:tee}, {:created}, {:updated})
+			INSERT INTO _team_players (team_id, player_id, tee, tournament_id, created, updated)
+			VALUES ({:team_id}, {:player_id}, {:tee}, {:tournament_id}, {:created}, {:updated})
 			RETURNING *
 		`).
 		Bind(dbx.Params{
-			"team_id":   teamId,
-			"player_id": playerId,
-			"tee":       tee,
-			"created":   time.Now().Format(time.RFC3339),
-			"updated":   time.Now().Format(time.RFC3339),
+			"team_id":       teamId,
+			"player_id":     playerId,
+			"tee":           tee,
+			"tournament_id": tournamentId,
+			"created":       time.Now().Format(time.RFC3339),
+			"updated":       time.Now().Format(time.RFC3339),
 		}).
 		Execute()
 

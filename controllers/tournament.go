@@ -192,7 +192,7 @@ func (tc *TournamentController) HandleUpdateTournament(e *core.RequestEvent) err
 			}
 
 			for _, player := range team.Players {
-				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee)
+				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee, tournamentId)
 				if err != nil {
 					return err
 				}
@@ -235,7 +235,7 @@ func (tc *TournamentController) HandleCreateTournament(e *core.RequestEvent) err
 			}
 
 			for _, player := range team.Players {
-				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee)
+				_, err = models.CreateTeamPlayerLookup(txDb.DB(), newTeam.Id, player.Id, player.Tee, tournament.Id)
 				if err != nil {
 					return err
 				}
